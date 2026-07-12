@@ -50,8 +50,8 @@ void app_main(void)
         printf("Outputting: %d\n", num);
 
         set_num(num);
-        num+=3;
+        num+=1;
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(200 / portTICK_PERIOD_MS);
     }
 }
