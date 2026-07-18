@@ -35,11 +35,14 @@
 // I think next I intend to add another command to blink another led, tie it to a button press. that's why the enum is there.
 enum QueueCommand
 {
-    blinkTimerLed
+    blinkTimerLed,
+    blinkButtonLed
 };
 
 // the pin the led should be attached to.
 static const gpio_num_t TIMER_LED_PIN = GPIO_NUM_13;
+static const gpio_num_t BUTTON_LED_PIN = GPIO_NUM_14;
+static const gpio_num_t BUTTON_PIN = GPIO_NUM_27;
 
 
 // Queue is a horrible word, typographically speaking.
@@ -63,6 +66,56 @@ static const UBaseType_t SEND_PRIORITY = 1;
 
 // how often we toggle the led.
 static const UBaseType_t QUEUE_SEND_FREQUENCY_MS =  250 / portTICK_PERIOD_MS;
+// Debouncing ignore timeframe.
+const static UBaseType_t MS_TO_IGNORE = 50 / portTICK_PERIOD_MS;
+
+// this is our interrupt handler. Later we register this handler with
+// a changing edge of our button pin, so this will happen on a button press.
+// because a physical button bounces on its contacts, multiple edges will happen
+// on button press and release. This means we need to lock out after hearing an edge for some time.
+// the level of the gpio input on this first edge will tell us if this is 
+// a button press or release. We only want to change the led when the button is depressed initially.
+
+// What does IRAM_ATTR mean? I'm not super sure.
+// I need to do more research into the memory map and onboard memory on the esp32, but
+// here's what I understand right now:
+// There are, broadly, two ways a computer archecture can be constructed:
+// Von Nuemann, where there is only one memory space that holds data and code
+// and Harvard, where code and data are in two seperate address spaces.
+// Most computers I've worked with are Von Nuemann, but the Xtensa cpus on the esp32, according to the docs,
+// is Harvard. Kinda, at least. This makes a certain amount of sense for a microcontroller I guess.
+// Anyways, it says that, but it has only one memory map (the memory map is the same between both cores btw)
+// I'm not really clear on all of the memory that's on the esp, but some of it is IRAM
+// I'm pretty sure that means 'Instruction Ram'.
+// It's apparently important that instruction handlers live in IRAM, possibly for speed reasons.
+// There might be a different or more important reason though, no idea really.
+// need to look into the memory on the esp more.
+static void IRAM_ATTR gpio_isr_handler(void* arg)
+{
+
+    static TickType_t lastInterruptTick = 0;
+
+    TickType_t now = xTaskGetTickCountFromISR();
+    if(lastInterruptTick+MS_TO_IGNORE > now)
+    {
+        // we are inside of the window where we ought to ignore new edges.
+        return;
+    }
+
+    // time to do the buisness.
+    lastInterruptTick = now;
+
+ 
+
+    // send the command to blink the led. 
+    // Note: printf (or logging, presumably) should not be used in an interrupt handler.
+    // printing is a very complex and expensive operation, and interrupt handlers need to be fast.
+    // it also uses a lot of stack memory. I have no idea what task's context we end up using for the stack
+    // in an interrupt handler but probably best not to do anything super complicated.
+    // Also printf might start a new task for UART comms. Doing that from inside an interrupt would probably not work very well.
+    uint32_t gpio_num = blinkButtonLed;
+    xQueueSendFromISR(Queue, &gpio_num, NULL);
+}
 
 
 
@@ -84,7 +137,7 @@ void app_main(void)
 
 
     Queue = xQueueCreate(
-        1,                  // Max number of items in the queue. only one item, since we're not actually using this much like a queue.
+        4,                  // Max number of items in the queue. only one item, since we're not actually using this much like a queue.
                             // If you're being good, this should be a constant or define, and not a magic number.
         sizeof(uint32_t)    // size of queue items. We're storing ints.
                             // Queue items will be directly copied into the Queue's associated memory, which will be on the heap.
@@ -141,6 +194,25 @@ void app_main(void)
         return;
     }
 
+    // Finally, configure our button.
+    // Note, there is another function which can set all of these things at once,
+    // you fill a struct with all of your options.
+    // it seems more useful for setting several inputs at once, though.
+    gpio_reset_pin(BUTTON_PIN);
+    gpio_set_direction(BUTTON_PIN, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(BUTTON_PIN, GPIO_PULLDOWN_ONLY);
+
+    // setup the interupt.
+
+    // not sure if these are the flags we want. the example didn't set any but that seems wrong?
+    gpio_install_isr_service(ESP_INTR_FLAG_LOWMED|ESP_INTR_FLAG_EDGE);
+    gpio_isr_handler_add(BUTTON_PIN, gpio_isr_handler, NULL);
+    // gpio_isr_register also exists, which can be used to setup an interrupt 
+    // for all gpio interrupts instead of one for a specific pin.
+
+    gpio_set_intr_type(BUTTON_PIN, GPIO_INTR_ANYEDGE);
+    gpio_intr_enable(BUTTON_PIN);
+
     printf("Started okay! Main exiting.\n");
 
 }
@@ -157,8 +229,14 @@ static void prvQueueReceiveTask( void *pvParameters )
     gpio_reset_pin(TIMER_LED_PIN);
     gpio_set_direction(TIMER_LED_PIN, GPIO_MODE_OUTPUT);
 
-    bool ledState = false;
-    gpio_set_level(TIMER_LED_PIN, ledState);
+    bool blinkLedState = false;
+    gpio_set_level(TIMER_LED_PIN, blinkLedState);
+
+    gpio_reset_pin(BUTTON_LED_PIN);
+    gpio_set_direction(BUTTON_LED_PIN, GPIO_MODE_OUTPUT);
+
+    bool buttonLedState = false;
+    gpio_set_level(BUTTON_LED_PIN, buttonLedState);
 
     while(true)
     {
@@ -185,11 +263,25 @@ static void prvQueueReceiveTask( void *pvParameters )
         switch(command)
         {
             case blinkTimerLed:
-                printf("Blinked led!\n");
-                ledState = !ledState;
-                gpio_set_level(TIMER_LED_PIN, ledState);
+                printf("Blink!\n");
+                blinkLedState = !blinkLedState;
+                gpio_set_level(TIMER_LED_PIN, blinkLedState);
                 break;
+            case blinkButtonLed:
+                printf("Button Blink!\n");  
 
+                // our interrupt handler catches the first 'bounce' and we need to wait until its stable.
+                // I think that doing a software only debounce kinda sucks tbh.
+                // although maybe I am just doing this in a silly way.
+
+                vTaskDelay(MS_TO_IGNORE);
+
+                // only respond to a rising edge.
+                if(!gpio_get_level(BUTTON_PIN)) break;
+
+                buttonLedState = !buttonLedState;
+                gpio_set_level(BUTTON_LED_PIN, buttonLedState);
+                break;
             default:
                 printf("Got unknown command id: %ld.\n", command);
         }
@@ -246,7 +338,7 @@ static void prvQueueSendTask( void *pvParameters )
             continue;
         }
 
-         printf("Sent Command.\n");
+        
 
     }
 
