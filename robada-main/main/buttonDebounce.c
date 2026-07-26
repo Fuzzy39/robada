@@ -2,12 +2,13 @@
 # define BUTTON_LIMIT 10
 static const char* LOG_TAG = "debounce";
 
-typedef struct ButtonInfo{
+typedef struct ButtonInfo
+{
     gpio_num_t pin;             // gpio pin button is tied to
     QueueHandle_t outputQueue;  // Queue to output if triggered.
     uint32_t output;            // What to output in output queue
     TickType_t lastInterrupted; // tick count when this button last (successfully) triggered an interrupt.
-};
+} ButtonInfo;
 
 static ButtonInfo registeredButtons[BUTTON_LIMIT];
 static size_t numButtons = 0;
@@ -16,9 +17,9 @@ static QueueHandle_t debounceQueue;
 static bool initialized = false;
 
 
-void IRAM_ATTR gpio_button_isr_handler(void* arg)
+void gpio_button_isr_handler(void* arg)
 {
-    ButtonInfo* button = (ButtonInfo)arg;
+    ButtonInfo* button = (ButtonInfo*)arg;
 
     TickType_t now = xTaskGetTickCountFromISR();
     if(button->lastInterrupted + MS_DEBOUNCE > now)
@@ -31,7 +32,7 @@ void IRAM_ATTR gpio_button_isr_handler(void* arg)
     button->lastInterrupted = now;
 
     // and send that we detected an edge.
-    if(xQueueSendFromISR(debounce, &(button->pin), NULL)==errQUEUE_FULL)
+    if(xQueueSendFromISR(debounceQueue, &(button->pin), NULL)==errQUEUE_FULL)
     {
         ESP_DRAM_LOGW(LOG_TAG, "Debounce queue full. dropping input from pin %llu.", button->pin);
     }
@@ -54,7 +55,7 @@ bool initialize_debounce_task(void)
     // register button pins. We'll do a bulk registering this time.
     gpio_config_t buttonConf = {};
     buttonConf.intr_type = GPIO_INTR_ANYEDGE;
-    buttonConf.mode = GPIO_INPUT;
+    buttonConf.mode = GPIO_MODE_INPUT;
     buttonConf.pull_down_en = GPIO_PULLDOWN_ENABLE;
     buttonConf.pull_up_en = GPIO_PULLUP_DISABLE;
     buttonConf.pin_bit_mask = 0;
@@ -77,7 +78,7 @@ bool initialize_debounce_task(void)
     // finally, make the task.
     if(xTaskCreate(gpio_button_task, "debounce", 4096, NULL, DEFAULT_PRIORITY, NULL) != pdPASS)
     {
-        ESP_LOGE(LOG_TAG, "Couldn't create debounce task. Error Code %d.\n", errorCode);
+        ESP_LOGE(LOG_TAG, "Couldn't create debounce task.\n");
         return false;
     }
 
@@ -93,18 +94,18 @@ bool register_gpio_button(gpio_num_t buttonPin, QueueHandle_t queue, uint32_t co
         return false;
     }
 
-    if(num_buttons => BUTTON_LIMIT)
+    if(numButtons >= BUTTON_LIMIT)
     {
-        ESP_LOGW(LOG_TAG, "Can't register more than %d buttons. Pin %d ignored.", BUTTON_LIMIT, button_pin);
+        ESP_LOGW(LOG_TAG, "Can't register more than %d buttons. Pin %d ignored.", BUTTON_LIMIT, buttonPin);
         return false;
     }
 
-    registeredButtons[numButtons] = {
-        .pin = buttonPin, 
-        .outputQueue = queue, 
-        .output = command,
-        .lastInterrupted = xTaskGetTickCount()
-    };
+    ButtonInfo* info = &(registeredButtons[numButtons]);
+    info->pin = buttonPin;
+    info->outputQueue = queue;
+    info->output = command;
+    info->lastInterrupted = xTaskGetTickCount();
+    
     numButtons++;
     return true;
 }
@@ -122,7 +123,7 @@ void gpio_button_task(void* args)
         {
             if(registeredButtons[i].pin == pin)
             {
-                button = registeredButtons[i];
+                button = &(registeredButtons[i]);
                 break;
             }
         }

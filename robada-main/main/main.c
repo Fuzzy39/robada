@@ -1,5 +1,6 @@
 #include "main.h"
 static const char* LOG_TAG = "main";
+QueueHandle_t commandQueue;
 
 void app_main(void)
 {
@@ -26,7 +27,7 @@ void app_main(void)
     // Start our two tasks.
     if(xTaskCreate(main_task, "robada main", 4096, NULL, DEFAULT_PRIORITY, NULL ) != pdPASS)
     {
-        ESP_LOGE(LOG_TAG, "Couldn't create main task. Error Code %d.\n", errorCode);
+        ESP_LOGE(LOG_TAG, "Couldn't create main task.\n");
         return;
     }
 
