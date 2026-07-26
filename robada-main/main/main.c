@@ -67,10 +67,12 @@ void main_task(void* args)
 
         // block until something's in the queue.
         xQueueReceive(commandQueue, &command, portMAX_DELAY);
+        ESP_LOGI(LOG_TAG, "Got Command %d.\n", command);    
         switch(command)
         {
             case buttonSwitchMotor:
                 currentMotor = !currentMotor;
+                ESP_LOGI(LOG_TAG,"Setting led to %d.\n", currentMotor);
                 gpio_set_level(MOTOR_SELECT_LED_PIN, currentMotor);
                 break;
             case buttonClockwise:
@@ -82,6 +84,7 @@ void main_task(void* args)
                 }
                 M1Speed = changeSpeed(M1Speed, true);
                 drive_motor(M1_PINOUT, M1Speed);
+                break;
             case buttonCounterclockwise:
                 // yes, this code is bad, but it's extremely temporary so It'll do for now.
                 if(currentMotor)
@@ -92,6 +95,7 @@ void main_task(void* args)
                 }
                 M1Speed = changeSpeed(M1Speed, false);
                 drive_motor(M1_PINOUT, M1Speed);
+                break;
             
         }
         
