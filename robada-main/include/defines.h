@@ -1,13 +1,9 @@
-#ifndef MAIN_H
-#define MAIN_H
+#ifndef DEFINES_H
+#define DEFINES_H
 
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
 #include "freertos/projdefs.h"
-
 #include "driver/gpio.h"
-#include "esp_log.h"
 
 // io definitions
 
@@ -39,28 +35,4 @@ static const MotorPinout M2_PINOUT = {
 
 // task priorities
 static const UBaseType_t DEFAULT_PRIORITY = 1;
-
-
-// main stuff
-// ------------
-extern QueueHandle_t commandQueue;
-
-void app_main(void);
-
-// app_main is already a task so this isn't strictly needed. Oh well, I felt like it.
-void main_task(void* args);
-void init_motor(MotorPinout motor);
-void drive_motor(MotorPinout motor, int motorSpeed); // very primitive.
-int changeSpeed(int prev, bool clockwise);
-
-// button debouncing
-// ------------
-
-static const UBaseType_t MS_DEBOUNCE = 50 / portTICK_PERIOD_MS;
-
-void IRAM_ATTR gpio_button_isr_handler(void* arg); // arguably shouldn't be in the header?
-bool initialize_debounce_task(void); // returns whether an error occured.
-bool register_gpio_button(gpio_num_t buttonPin, QueueHandle_t queue, uint32_t command);
-void gpio_button_task(void* args);
-
 #endif

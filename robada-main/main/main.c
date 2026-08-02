@@ -1,4 +1,10 @@
+#include "defines.h"
+#include "freertos/task.h"
 #include "main.h"
+#include "buttonDebounce.h"
+#include "pwmControl.h"
+
+
 static const char* LOG_TAG = "main";
 QueueHandle_t commandQueue;
 
@@ -40,6 +46,7 @@ void app_main(void)
         return;
     }
 
+    init();
 
     ESP_LOGI(LOG_TAG, "Initialization Complete.\n");
 }
@@ -52,7 +59,7 @@ void main_task(void* args)
     int M2Speed = 0;
 
     // some initialization: Motor pins and the led we want to use.
-    init_motor(M1_PINOUT);
+    // init_motor(M1_PINOUT);
     init_motor(M2_PINOUT);
 
     gpio_reset_pin(MOTOR_SELECT_LED_PIN);
@@ -82,8 +89,8 @@ void main_task(void* args)
                     drive_motor(M2_PINOUT, M2Speed);
                     break;
                 }
-                M1Speed = changeSpeed(M1Speed, true);
-                drive_motor(M1_PINOUT, M1Speed);
+                // M1Speed = changeSpeed(M1Speed, true);
+                // drive_motor(M1_PINOUT, M1Speed);
                 break;
             case buttonCounterclockwise:
                 // yes, this code is bad, but it's extremely temporary so It'll do for now.
@@ -93,8 +100,8 @@ void main_task(void* args)
                     drive_motor(M2_PINOUT, M2Speed);
                     break;
                 }
-                M1Speed = changeSpeed(M1Speed, false);
-                drive_motor(M1_PINOUT, M1Speed);
+                // M1Speed = changeSpeed(M1Speed, false);
+                // drive_motor(M1_PINOUT, M1Speed);
                 break;
             
         }
@@ -117,8 +124,9 @@ void init_motor(MotorPinout motor)
 // also definitely temp, as soon as we get pwm this is gone.
 void drive_motor(MotorPinout motor, int motorSpeed)
 {
-   switch (motorSpeed)
-   {
+
+    switch (motorSpeed)
+    {
     case -1:
         gpio_set_level(motor.clockwisePin,        false);
         gpio_set_level(motor.counterclockwisePin, true);
@@ -131,7 +139,7 @@ void drive_motor(MotorPinout motor, int motorSpeed)
         gpio_set_level(motor.clockwisePin,        false);
         gpio_set_level(motor.counterclockwisePin, false);
         break;
-   }
+    }
 }
 
 // also definitely temp code. and bad code, to boot.

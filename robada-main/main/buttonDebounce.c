@@ -1,4 +1,6 @@
-#include "main.h"
+#include "defines.h"
+#include "buttonDebounce.h"
+
 # define BUTTON_LIMIT 10
 static const char* LOG_TAG = "debounce";
 
