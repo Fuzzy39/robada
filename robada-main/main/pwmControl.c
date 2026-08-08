@@ -7,9 +7,15 @@ static const char* LOG_TAG = "PWM";
 static const uint32_t TIMER_HZ = 10000000; // 10 MHz
 static const uint32_t PERIOD_TICKS = 1000; // 10    khz 
 
-void init()
+static mcpwm_timer_handle_t timer;
+
+static PwmMotor motors[3];
+
+
+void PWM_initialize(gpio_num_t motorEnable, MotorConfig* motors, size_t numMotors)
 {
-    mcpwm_timer_handle_t timer;
+    // start by setting up the timer.
+
     mcpwm_timer_config_t timerConfig = {
         .group_id = 0, // 0, 1, 2, We've got 3 of these guys on board.
         .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
@@ -28,9 +34,50 @@ void init()
     if(err!=ESP_OK)
     {
         ESP_LOGE(LOG_TAG, "Couldn't make timer. Got error code %d\n", err);
-        return;    
+        return false;    
     }
-    ESP_LOGI(LOG_TAG, "Made Timer. yay!\n");
+    ESP_LOGI(LOG_TAG, "Set up the timer.\n");
+
+
+    for(int i = 0; i<numMotors; i++)
+    {   
+        motors[i]
+        if(!PWM_setup_motor(MotorConfig[i]))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+void PWM_setup_motor(MotorConfig config, PwmMotor* motor)
+{
+
+}
+
+
+bool PWM_claim_motor(Motor motor, bool shouldBlock); 
+
+
+void PWM_release_motor(Motor motor, bool stopMotor);
+
+
+bool PWM_set_motor_speed(Motor motor, float speed);
+
+
+float PWM_get_motor_speed(Motor motor);
+
+
+void PWM_stop_all_motors();
+
+
+void init()
+{
+    
+
+   
 
     mcpwm_oper_handle_t operator;
     mcpwm_operator_config_t operatorConfig = {

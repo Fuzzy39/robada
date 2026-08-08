@@ -14,23 +14,70 @@
 #include "hal/mcpwm_types.h"
 
 
-// const uint32_t PWM_TICK_HZ = 10000000; // 10 MHz
-// const uint32_t PWM_PERIOD_TICKS = 1000; // 10 khz 
-// const uint32_t PWM_PERIOD_HZ = PWM_TICK_HZ/PWM_PERIOD_TICKS;
+const uint32_t PWM_TICK_HZ = 10000000; // 10 MHz
+const uint32_t PWM_PERIOD_TICKS = 1000; // 10 khz 
+const uint32_t PWM_PERIOD_HZ = PWM_TICK_HZ/PWM_PERIOD_TICKS;
 
-// const uint32_t PWM_SPEED_MAX = PWM_PERIOD_TICKS;
-// const uint32_t PWM_SPEED_MIN = -PWM_SPEED_MAX;
+const uint32_t PWM_SPEED_MAX = PWM_PERIOD_TICKS;
+const uint32_t PWM_SPEED_MIN = -PWM_SPEED_MAX;
 
-// typedef struct Motor
-// {
-//     //uint32_t clockwise_pin_number;
-//     //uint32_t counterclockwise_pin_number;
-//     mcpwm_oper_handle_t pwm_operator;
-//     mcpwm_gen_handle_t pwm_generator;
-//     mcpwm_cmpr_handle_t pwm_comparator;
+typedef struct PwmMotor
+{
+    mcpwm_oper_handle_t pwm_operator;
+    mcpwm_cmpr_handle_t pwm_comparator;
+    mcpwm_gen_handle_t pwm_gen_clockwise;
+    mcpwm_gen_handle_t pwm_gen_counterclockwise;
 
-//     int32_t speed; // Defined as 
-// } Motor;
+    SemaphoreHandle_t owner_semaphore; // Binary sempaphore to keep track of which task owns the motor (and is allowed to set the speed of it)
+    SemaphoreHandle_t read_write_mutex; // mutual exclusion when reading/writing speed. Non-owners can read the speed of the motor, but not write it.
+
+    int32_t speed; // From PWM_SPEED_MIN to PWM_SPEED_MAX
+} PwmMotor;
+
+enum Motor
+{
+    BASE_MOTOR = 0,
+    SHOULDER_MOTOR = 1,
+    ELBOW_MOTOR = 2
+};
+
+
+typedef struct MotorConfig
+{
+    Motor motor;
+    int clockwiseGpioNum;
+    int counterclockwiseGpioNum;
+
+} MotorConfig;
+
+
+/// @brief Initialize PWM motor control.
+/// @param motorEnable the gpio_num_t of the pin connected to the motor controller enable lines.
+/// @param motorPinouts An array of MotorPinout structs. 
+/// @param numMotors The number of elements in motorPinouts. Should be no greater than 3.
+bool PWM_initialize(gpio_num_t motorEnable, MotorConfig* motors, size_t numMotors);
+
+// Private function to initialize a single motor.
+bool PWM_setup_motor(MotorConfig config);
+
+// Claim this motor to be controlled by this task. 
+// If shouldBlock is true, blocks until this motor has been released and returns true.
+// If false, will return false if the motor is currently claimed by another task, otherwise claims the motor and returns true.
+bool PWM_claim_motor(Motor motor, bool shouldBlock); 
+
+// Release a motor from control by this task. 
+void PWM_release_motor(Motor motor, bool stopMotor);
+
+// Set motor speed, where [-1, 0) is counterclockwise, 0 is stopped, and (0, 1] is clockwise.
+// Returns false and has no effect if the motor has not been claimed.
+bool PWM_set_motor_speed(Motor motor, float speed);
+
+// Get the current speed that a motor has been set to (not measured). [-1, 0) is counterclockwise, 0 is stopped, and (0, 1] is clockwise.
+float PWM_get_motor_speed(Motor motor);
+
+// Call this if we're crashing and burning. Stops all motors and un-asserts the motor controller enable pin. 
+// Ignores which task has claimed the motors. Future PWM calls will have no effect.
+void PWM_stop_all_motors();
 
 
 
