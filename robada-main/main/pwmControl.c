@@ -8,6 +8,9 @@ static const uint32_t TIMER_HZ = 10000000; // 10 MHz
 static const uint32_t PERIOD_TICKS = 1000; // 10    khz 
 
 static mcpwm_timer_handle_t timer;
+static mcpwm_fault_handle_t softwareFault;
+
+mcpwm_gen_compare_event_action_t comparatorAction; // configuration object we modify frequently.
 
 static PwmMotor motors[3];
 
@@ -30,30 +33,110 @@ void PWM_initialize(gpio_num_t motorEnable, MotorConfig* motors, size_t numMotor
         }
     };
 
-    esp_err_t err = mcpwm_new_timer(&timerConfig, &timer);
-    if(err!=ESP_OK)
-    {
-        ESP_LOGE(LOG_TAG, "Couldn't make timer. Got error code %d\n", err);
-        return false;    
-    }
-    ESP_LOGI(LOG_TAG, "Set up the timer.\n");
+    ESP_ERR_CHECK(mcpwm_new_timer(&timerConfig, &timer));
+    // ESP_ERR_CHECK checks for an error (duh) and prints out a message if there is one.
+    // It'll also call 'abort()' which I assume resets the processor... looks like by default, yes.
+    // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/fatal-errors.html
 
+
+    // While we're here, we also want to setup the fault object.
+    mcpwm_soft_fault_config_t faultConfig = {}; // this thing has no members! wonder how that works.
+    // apparently it's undefined behavior
+    // oh well, not my fault.
+    ESP_ERR_CHECK(mcpwm_new_soft_fault(&faultConfig, &softwareFault));
+   
+    ESP_LOGI(LOG_TAG, "Initialized common MCPWM objects.\n");
 
     for(int i = 0; i<numMotors; i++)
     {   
-        motors[i]
-        if(!PWM_setup_motor(MotorConfig[i]))
-        {
-            return false;
-        }
+        motors[i] = {}; // zero initialize the struct. this may be uneeded.
+        PWM_setup_motor(&MotorConfig[i], &motors[i]);
     }
 
+    ESP_LOGI(LOG_TAG, "Initialized PWM controller.\n");
     return true;
 }
 
 
-void PWM_setup_motor(MotorConfig config, PwmMotor* motor)
+void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor)
 {
+    // a PwmMotor needs ....
+    // An operator, comparator, 2 generators, and 2 semaphores.
+    // Okay, lets get cracking, then.
+
+
+    // operator first, since it contains everything.
+    mcpwm_operator_config_t operatorConfig = {
+        .group_id = config->motor,
+        .intr_priority = 0
+    };
+
+    ESP_ERR_CHECK(mcpwm_new_operator(&operatorConfig, &(motor->pwm_operator)));
+    // connect the timer to the operator so we can get something done.
+    ESP_ERR_CHECK(mcpwm_operator_connect_timer(motor->pwm_operator, timer));
+
+    // next, the comparator.
+    mcpwm_comparator_config_t comparatorConfig = {
+        .intr_priority = 0,
+        .flags = {
+            .update_cmp_on_tez = true,
+            .update_cmp_on_tep = false,
+            .update_cmp_on_sync = false
+        }
+    };
+
+    ESP_ERR_CHECK(mcpwm_new_comparator(motor->pwm_operator, &comparatorConfig, &(motor->pwm_comparator)));
+
+    // We will set the compare value when we set the motor speed by the end of this.
+
+    // Generator time!
+    mcpwm_generator_config_t generatorConfig = {
+        .gen_gpio_num = config->clockwiseGpioNum, // Motor one clockwise
+        .flags = {
+            .invert_pwm = false,
+        },
+    };
+
+    ESP_ERR_CHECK(mcpwm_new_generator(motor->pwm_operator, &generatorConfig, &(motor->pwm_gen_clockwise)));
+
+    generatorConfig.gen_gpio_num = config->counterclockwiseGpioNum;
+    ESP_ERR_CHECK(mcpwm_new_generator(motor->pwm_operator, &generatorConfig, &(motor->pwm_gen_counterclockwise)));
+
+    // generator events...
+    mcpwm_gen_timer_event_action_t timerAction =
+    {
+        .direction = MCPWM_TIMER_DIRECTION_UP,
+        .event = MCPWM_TIMER_EVENT_EMPTY,
+        .action = MCPWM_GEN_ACTION_LOW
+    };
+    ESP_ERR_CHECK(mcpwm_generator_set_action_on_timer_event(motor->pwm_gen_clockwise,  timerAction));
+    ESP_ERR_CHECK(mcpwm_generator_set_action_on_timer_event(motor->pwm_gen_counterclockwise,  timerAction));
+
+    comparatorAction =  // There are macros for this.
+    {
+        .direction = MCPWM_TIMER_DIRECTION_UP,
+        .comparator = comparator,
+        .action = MCPWM_GEN_ACTION_LOW // We are also setting the comparator low, because the motors will be stopped initially... is this the best way to do this?
+    };
+    ESP_ERR_CHECK(mcpwm_generator_set_action_on_compare_event(motor->pwm_gen_clockwise,  comparatorAction));
+    ESP_ERR_CHECK(mcpwm_generator_set_action_on_compare_event(motor->pwm_gen_counterclockwise,  comparatorAction));
+
+    // don't forget to set the fault stuff!
+    mcpwm_gen_fault_event_action_t faultAction = 
+    {
+        .direction = MCPW_TIMER_DIRECTION_UP,
+        .fault = softwareFault,
+        .action = MCPWM_GEN_ACTION_LOW
+    };
+    ESP_ERR_CHECK(mcpwm_generator_set_action_on_fault_event(motor->pwm_gen_clockwise, faultAction));
+    ESP_ERR_CHECK(mcpwm_generator_set_action_on_fault_event(motor->pwm_gen_counterclockwise, faultAction));
+
+
+    // And initialize our semaphore and mutex.
+    // TODO!
+
+    // finally, set the speed. We use this 'raw' version to avoid making the task that initializes the pwm claim the motors.
+    PWM_set_motor_speed(config->motor, 0);
 
 }
 
@@ -77,7 +160,7 @@ void init()
 {
     
 
-   
+
 
     mcpwm_oper_handle_t operator;
     mcpwm_operator_config_t operatorConfig = {

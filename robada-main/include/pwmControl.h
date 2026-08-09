@@ -55,10 +55,10 @@ typedef struct MotorConfig
 /// @param motorEnable the gpio_num_t of the pin connected to the motor controller enable lines.
 /// @param motorPinouts An array of MotorPinout structs. 
 /// @param numMotors The number of elements in motorPinouts. Should be no greater than 3.
-bool PWM_initialize(gpio_num_t motorEnable, MotorConfig* motors, size_t numMotors);
+void PWM_initialize(gpio_num_t motorEnable, MotorConfig* motors, size_t numMotors);
 
 // Private function to initialize a single motor.
-bool PWM_setup_motor(MotorConfig config);
+void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor);
 
 // Claim this motor to be controlled by this task. 
 // If shouldBlock is true, blocks until this motor has been released and returns true.
@@ -78,11 +78,6 @@ float PWM_get_motor_speed(Motor motor);
 // Call this if we're crashing and burning. Stops all motors and un-asserts the motor controller enable pin. 
 // Ignores which task has claimed the motors. Future PWM calls will have no effect.
 void PWM_stop_all_motors();
-
-
-
-
-void init();
 
 
 #endif
