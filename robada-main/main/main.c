@@ -1,8 +1,5 @@
-#include "defines.h"
-#include "freertos/task.h"
 #include "main.h"
-#include "buttonDebounce.h"
-#include "pwmControl.h"
+
 
 
 static const char* LOG_TAG = "main";
@@ -34,7 +31,7 @@ void app_main(void)
     register_gpio_button(MOTOR_CLOCKWISE_BUTTON_PIN, commandQueue, buttonClockwise);
     register_gpio_button(MOTOR_COUNTERCLOCKWISE_BUTTON_PIN, commandQueue, buttonCounterclockwise);
 
-    PWM_initialize(0, motorConfigs, sizeof(motorConfigs)/sizeof(MotorConfig));
+    PWM_initialize(0, motorConfigs, numMotors);
 
 
     if(!initialize_debounce_task())
@@ -45,7 +42,7 @@ void app_main(void)
 
 
     // Start our two tasks.
-    if(xTaskCreate(main_task, "robada main", 4096, NULL, DEFAULT_PRIORITY, NULL ) != pdPASS)
+    if(xTaskCreate(main_task, "robada main", 4096*2, NULL, DEFAULT_PRIORITY, NULL ) != pdPASS)
     {
         ESP_LOGE(LOG_TAG, "Couldn't create main task.\n");
         return;
@@ -118,8 +115,7 @@ void changeSpeed(pwm_motor_handle_t motor, bool clockwise)
 {
     float prev = PWM_get_motor_speed(motor);
     float addTo = .2f*((int)clockwise*2-1);
-    ESP_LOGI(LOG_TAG,"Setting motor %d to speed %f.\n", motor, prev+addTo);
-
-    PWM_set_motor_speed(motor, prev+addTo); // the set speed function caps our speed to the max/min so we should be good.
+    float toSet = prev+addTo;
+    PWM_set_motor_speed(motor, toSet); // the set speed function caps our speed to the max/min so we should be good.
 
 }

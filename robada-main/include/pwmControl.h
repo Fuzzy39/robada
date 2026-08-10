@@ -11,14 +11,14 @@
 #include "driver/mcpwm_oper.h"
 #include "driver/mcpwm_cmpr.h"
 #include "driver/mcpwm_gen.h"
+#include "driver/mcpwm_fault.h"
 #include "hal/mcpwm_types.h"
+#include "driver/gpio.h"
+
+#include "defines.h"
 
 
-const uint32_t PWM_TICK_HZ = 10000000; // 10 MHz
-const uint32_t PWM_PERIOD_TICKS = 1000; // 10 khz 
-const uint32_t PWM_PERIOD_HZ = PWM_TICK_HZ/PWM_PERIOD_TICKS;
 
-typedef unsigned int pwm_motor_handle_t;
 
 typedef struct PwmMotor
 {
@@ -28,27 +28,20 @@ typedef struct PwmMotor
     mcpwm_gen_handle_t pwm_gen_clockwise;
     mcpwm_gen_handle_t pwm_gen_counterclockwise;
 
-    SemaphoreHandle_t owner_semaphore; // Binary sempaphore to keep track of which task owns the motor (and is allowed to set the speed of it)
+    SemaphoreHandle_t owner_mutex; // mutex to keep track of which task owns the motor (and is allowed to set the speed of it)
     SemaphoreHandle_t read_write_mutex; // mutual exclusion when reading/writing speed. Non-owners can read the speed of the motor, but not write it.
 
-    int32_t speed; // From PWM_SPEED_MIN to PWM_SPEED_MAX
+    float speed; // From PWM_SPEED_MIN to PWM_SPEED_MAX
 } PwmMotor;
 
 
-typedef struct MotorConfig
-{
-    pwm_motor_handle_t motor;
-    int clockwiseGpioNum;
-    int counterclockwiseGpioNum;
-
-} MotorConfig;
 
 
 /// @brief Initialize PWM motor control.
 /// @param motorEnable the gpio_num_t of the pin connected to the motor controller enable lines.
 /// @param motorPinouts An array of MotorPinout structs. 
 /// @param numMotors The number of elements in motorPinouts. Should be no greater than 3.
-void PWM_initialize(gpio_num_t motorEnable, MotorConfig* motors, size_t numMotors);
+void PWM_initialize(gpio_num_t motorEnable, const MotorConfig* motors, size_t numMotors);
 
 // Private function to initialize a single motor.
 void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor);

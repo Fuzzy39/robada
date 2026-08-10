@@ -1,29 +1,32 @@
-#include "defines.h"
 #include "pwmControl.h"
 #include <limits.h>
+#include <math.h>
 
 static const char* LOG_TAG = "PWM";
 
-static const uint32_t TIMER_HZ = 10000000; // 10 MHz
-static const uint32_t PERIOD_TICKS = 1000; // 10    khz 
+// static const uint32_t TIMER_HZ = 10000000; // 10 MHz
+// static const uint32_t PERIOD_TICKS = 1000; // 10    khz 
+
+
+const uint32_t PWM_TICK_HZ = 10000000; // 10 MHz
+const uint32_t PWM_PERIOD_TICKS = 1000; // 10 khz 
+const uint32_t PWM_PERIOD_HZ = PWM_TICK_HZ/PWM_PERIOD_TICKS;
 
 static mcpwm_timer_handle_t timer;
-static mcpwm_fault_handle_t softwareFault;
-
 
 static PwmMotor motors[3];
 
 
-void PWM_initialize(gpio_num_t motorEnable, MotorConfig* configs, size_t numMotors)
+void PWM_initialize(gpio_num_t motorEnable, const MotorConfig* configs, size_t numMotors)
 {
     // start by setting up the timer.
 
     mcpwm_timer_config_t timerConfig = {
         .group_id = 0, // 0, 1, 2, We've got 3 of these guys on board.
         .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
-        .resolution_hz = TIMER_HZ,
+        .resolution_hz = PWM_TICK_HZ,
         .count_mode = MCPWM_TIMER_COUNT_MODE_UP,
-        .period_ticks = PERIOD_TICKS,
+        .period_ticks = PWM_PERIOD_TICKS,
         .intr_priority = 0, // Default, low priority
         .flags = {
             .update_period_on_empty = true,
@@ -32,41 +35,29 @@ void PWM_initialize(gpio_num_t motorEnable, MotorConfig* configs, size_t numMoto
         }
     };
 
-    ESP_ERR_CHECK(mcpwm_new_timer(&timerConfig, &timer));
-    // ESP_ERR_CHECK checks for an error (duh) and prints out a message if there is one.
+    ESP_ERROR_CHECK(mcpwm_new_timer(&timerConfig, &timer));
+    // ESP_ERROR_CHECK checks for an error (duh) and prints out a message if there is one.
     // It'll also call 'abort()' which I assume resets the processor... looks like by default, yes.
     // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/fatal-errors.html
 
-
-    // While we're here, we also want to setup the fault object.
-    mcpwm_soft_fault_config_t faultConfig = {}; // this thing has no members! wonder how that works.
-    // apparently it's undefined behavior
-    // oh well, not my fault.
-    ESP_ERR_CHECK(mcpwm_new_soft_fault(&faultConfig, &softwareFault));
-   
-    ESP_LOGI(LOG_TAG, "Initialized common MCPWM objects.\n");
-
+    // actually initialize the motors
     for(int i = 0; i<numMotors; i++)
     {   
-        motors[configs[i].motor]= {}; // zero init the struct (might be uneccesary)
-        PWM_setup_motor(&MotorConfig[i], &configs[i]);
+        PWM_setup_motor(&configs[i], &motors[configs[i].motor]);
     }
+
 
     // finally, start the timer and enable the gpio enable
 
-    ESP_ERR_CHECK(mcpwm_timer_enable(timer));
-    ESP_ERR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
+    ESP_ERROR_CHECK(mcpwm_timer_enable(timer));
+    ESP_ERROR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
 
     // gpio_reset_pin(motorEnable);
     // gpio_set_direction(motorEnable, GPIO_MODE_OUTPUT);
     // gpio_set_level(motorEnable, true);  // this should only go low when the program aborts(???), which I've configured to halt the system/
     //                                     // TEST AND MAKE SURE THE IO GOES LOW WHEN abort() is called. This is a safety thing.
 
-
     ESP_LOGI(LOG_TAG, "Initialized PWM controller.\n");
-    return true;
-
-
 }
 
 
@@ -79,13 +70,13 @@ void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor)
 
     // operator first, since it contains everything.
     mcpwm_operator_config_t operatorConfig = {
-        .group_id = config->motor,
+        .group_id = 0, //config->motor,
         .intr_priority = 0
     };
 
-    ESP_ERR_CHECK(mcpwm_new_operator(&operatorConfig, &(motor->pwm_operator)));
+    ESP_ERROR_CHECK(mcpwm_new_operator(&operatorConfig, &(motor->pwm_operator)));
     // connect the timer to the operator so we can get something done.
-    ESP_ERR_CHECK(mcpwm_operator_connect_timer(motor->pwm_operator, timer));
+    ESP_ERROR_CHECK(mcpwm_operator_connect_timer(motor->pwm_operator, timer));
 
     // next, the comparator.
     mcpwm_comparator_config_t comparatorConfig = {
@@ -97,7 +88,7 @@ void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor)
         }
     };
 
-    ESP_ERR_CHECK(mcpwm_new_comparator(motor->pwm_operator, &comparatorConfig, &(motor->pwm_comparator)));
+    ESP_ERROR_CHECK(mcpwm_new_comparator(motor->pwm_operator, &comparatorConfig, &(motor->pwm_comparator)));
 
     // We will set the compare value when we set the motor speed by the end of this.
 
@@ -109,10 +100,10 @@ void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor)
         },
     };
 
-    ESP_ERR_CHECK(mcpwm_new_generator(motor->pwm_operator, &generatorConfig, &(motor->pwm_gen_clockwise)));
+    ESP_ERROR_CHECK(mcpwm_new_generator(motor->pwm_operator, &generatorConfig, &(motor->pwm_gen_clockwise)));
 
     generatorConfig.gen_gpio_num = config->counterclockwiseGpioNum;
-    ESP_ERR_CHECK(mcpwm_new_generator(motor->pwm_operator, &generatorConfig, &(motor->pwm_gen_counterclockwise)));
+    ESP_ERROR_CHECK(mcpwm_new_generator(motor->pwm_operator, &generatorConfig, &(motor->pwm_gen_counterclockwise)));
 
     // generator events...
     mcpwm_gen_timer_event_action_t timerAction =
@@ -121,20 +112,8 @@ void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor)
         .event = MCPWM_TIMER_EVENT_EMPTY,
         .action = MCPWM_GEN_ACTION_LOW
     };
-    ESP_ERR_CHECK(mcpwm_generator_set_action_on_timer_event(motor->pwm_gen_clockwise,  timerAction));
-    ESP_ERR_CHECK(mcpwm_generator_set_action_on_timer_event(motor->pwm_gen_counterclockwise,  timerAction));
-
-
-    // don't forget to set the fault stuff!
-    mcpwm_gen_fault_event_action_t faultAction = 
-    {
-        .direction = MCPW_TIMER_DIRECTION_UP,
-        .fault = softwareFault,
-        .action = MCPWM_GEN_ACTION_LOW
-    };
-    ESP_ERR_CHECK(mcpwm_generator_set_action_on_fault_event(motor->pwm_gen_clockwise, faultAction));
-    ESP_ERR_CHECK(mcpwm_generator_set_action_on_fault_event(motor->pwm_gen_counterclockwise, faultAction));
-
+    ESP_ERROR_CHECK(mcpwm_generator_set_action_on_timer_event(motor->pwm_gen_clockwise,  timerAction));
+    ESP_ERROR_CHECK(mcpwm_generator_set_action_on_timer_event(motor->pwm_gen_counterclockwise,  timerAction));
 
     // And initialize our semaphore and mutex.
     
@@ -144,8 +123,8 @@ void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor)
     
     // We can stop the motors externally by triggering the software fault, which should work in cases where the controlling task isn't cooperating.
    
-    motor->owner_semaphore = xSemaphoreCreateBinary(); // Note that the calling task owns this semaphore when we create it (We have to release it later)
-    if(motor->owner_semaphore == NULL)
+    motor->owner_mutex = xSemaphoreCreateMutex(); // Note that the calling task owns this semaphore when we create it (We have to release it later)
+    if(motor->owner_mutex == NULL)
     {
         ESP_LOGE(LOG_TAG, "Failed to create semaphore for motor %i.\n", config->motor);
         abort(); // bring down the whole program.
@@ -157,14 +136,9 @@ void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor)
         ESP_LOGE(LOG_TAG, "Failed to create mutex for motor %i.\n", config->motor);
         abort(); // bring down the whole program.
     }
-    // release the mutex (not 100% sure if we need to do this here)
-    if(!xSemaphoreGive(motor->read_write_mutex))
-    {
-        ESP_LOGE(LOG_TAG, "Failed to release mutex for motor %i.\n", config->motor);
-        abort();   
-    }
   
     // Stop (thereby properly setting up the comparator and generators) and release the semaphore we have on the motor.
+    PWM_claim_motor(config->motor, true);
     PWM_release_motor(config->motor, true);
 
 }
@@ -173,23 +147,17 @@ void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor)
 bool PWM_claim_motor(pwm_motor_handle_t handle, bool shouldBlock)
 {
     // Claiming the motor should be relatively easy.
-    PwmMotor* m = motors[handle];
-    if(!xSemaphoreTake(m->owner_semaphore, shouldBlock?portMAX_DELAY:0))
-    {
-        return false;
-    }
-
-    return true;
+    return xSemaphoreTake(motors[handle].owner_mutex, shouldBlock?portMAX_DELAY:0);
 } 
 
 static void assert_current_task_owns_motor(pwm_motor_handle_t handle)
 {
-    TaskStatus_t taskSatus;
+    TaskStatus_t taskStatus;
     vTaskGetInfo( NULL, &taskStatus, pdTRUE, eRunning ); // null is to get the current task, pdTrue and eRunning are just to avoid
                                                          // having the function figure out remaining stack space and the task's state,
                                                          // which are expensive operations.
     TaskHandle_t currentTask = taskStatus.xHandle;
-    TaskHandle_t motorOwner = xSemaphoreGetMutexHolder(motors[handle]->owner_semaphore);
+    TaskHandle_t motorOwner = xSemaphoreGetMutexHolder(motors[handle].owner_mutex);
 
     if(motorOwner != currentTask)
     {
@@ -197,7 +165,7 @@ static void assert_current_task_owns_motor(pwm_motor_handle_t handle)
         TaskStatus_t ownerTaskStatus;
         vTaskGetInfo( motorOwner, &ownerTaskStatus, pdTRUE, eRunning );
 
-        ESP_LOGE(LOG_TAG, "PWM_set_motor_speed: task %s can't set motor %i's speed because %s controls this motor.\n",
+        ESP_LOGE(LOG_TAG, "PWM_set_motor_speed: task '%s' can't set motor %i's speed because task '%s' controls this motor.\n",
             taskStatus.pcTaskName, handle, ownerTaskStatus.pcTaskName);
         abort();
     }
@@ -206,29 +174,29 @@ static void assert_current_task_owns_motor(pwm_motor_handle_t handle)
 
 void PWM_release_motor(pwm_motor_handle_t handle, bool stopMotor)
 {
-    assert_current_task_owns_motor();
+    assert_current_task_owns_motor(handle);
     if(stopMotor) PWM_set_motor_speed(handle, 0);
 
-    PwmMotor* m = motors[handle];
+    PwmMotor* m = &(motors[handle]);
     // Now we release the motor.
-    if(!xSemaphoreGive(handle->read_write_mutex))
+    if(!xSemaphoreGive(m->owner_mutex))
     {
         ESP_LOGE(LOG_TAG, "Failed to release semaphore for motor %i.\n", handle);
         abort();   
     }
-}
+}   
 
 
 
 void PWM_set_motor_speed(pwm_motor_handle_t handle, float speed)
 {
     // this will probably be the second most complicated part, aside from initialization.
-
+    bool isClockwise = speed>0;
     // First, check that we have actually claimed the motor.
     assert_current_task_owns_motor(handle);
 
     // get the read_write_mutex before we actually do anything...
-    if(!xSemaphoreTake(motors[handle]->read_write_mutex, portMAX_DELAY))
+    if(!xSemaphoreTake(motors[handle].read_write_mutex, portMAX_DELAY))
     {
         ESP_LOGE(LOG_TAG, "PWM_get_motor_speed: Failed to take mutex for motor %i.\n", handle);
         abort();  
@@ -237,9 +205,9 @@ void PWM_set_motor_speed(pwm_motor_handle_t handle, float speed)
     // Now we start doing the annoying stuff.
 
     mcpwm_gen_compare_event_action_t highAction 
-        = MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, motors[handle]->pwm_comparator, MCPWM_GEN_ACTION_HIGH);
+        = MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, motors[handle].pwm_comparator, MCPWM_GEN_ACTION_HIGH);
     mcpwm_gen_compare_event_action_t lowAction 
-        = MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, motors[handle]->pwm_comparator, MCPWM_GEN_ACTION_LOW);
+        = MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, motors[handle].pwm_comparator, MCPWM_GEN_ACTION_LOW);
 
     mcpwm_gen_compare_event_action_t clockwiseAction = lowAction;
     mcpwm_gen_compare_event_action_t counterclockwiseAction = lowAction;
@@ -247,23 +215,24 @@ void PWM_set_motor_speed(pwm_motor_handle_t handle, float speed)
     if(speed>0) clockwiseAction = highAction;
     if(speed<0) counterclockwiseAction = highAction;
 
-    ESP_ERR_CHECK(mcpwm_generator_set_action_on_compare_event(motor->pwm_gen_clockwise,  clockwiseAction));
-    ESP_ERR_CHECK(mcpwm_generator_set_action_on_compare_event(motor->pwm_gen_counterclockwise,  counterclockwiseAction));
+    ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(motors[handle].pwm_gen_clockwise,  clockwiseAction));
+    ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(motors[handle].pwm_gen_counterclockwise,  counterclockwiseAction));
 
     // set the operator based on the magnitude of the speed.
-    speed = abs(speed);
+    speed = fabsf(speed);
     if(speed>1) speed = 1;
 
     // we set the pwm line low whenever the timer resets, so we want the comparator value to be closer to zero the greater
     // the speed value is.
     uint32_t comparatorTickValue = (1-speed)*PWM_PERIOD_TICKS; 
-    ESP_ERR_CHECK(mcpwm_comparator_set_compare_value(comparator, comparatorTickValue));
+    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(motors[handle].pwm_comparator, comparatorTickValue));
 
     // finally update the speed we set the motor to. this really is only for reading later.
-    motors[handle]->speed = speed;
+    ESP_LOGI(LOG_TAG, "Set motor %d speed to %f", handle, speed);
+    motors[handle].speed = speed * (isClockwise?1:-1);
 
 
-    if(!xSemaphoreGive(motors[handle]->read_write_mutex))
+    if(!xSemaphoreGive(motors[handle].read_write_mutex))
     {
         ESP_LOGE(LOG_TAG, "PWM_get_motor_speed: Failed to give mutex for motor %i.\n", handle);
         abort();  
@@ -275,19 +244,20 @@ void PWM_set_motor_speed(pwm_motor_handle_t handle, float speed)
 
 float PWM_get_motor_speed(pwm_motor_handle_t handle)
 {
-    if(!xSemaphoreTake(motors[handle]->read_write_mutex, portMAX_DELAY))
+    if(!xSemaphoreTake(motors[handle].read_write_mutex, portMAX_DELAY))
     {
         ESP_LOGE(LOG_TAG, "PWM_get_motor_speed: Failed to take mutex for motor %i.\n", handle);
         abort();  
     }
 
-    float toReturn = motors[handle]->speed;
+    float toReturn = motors[handle].speed;
 
-    if(!xSemaphoreGive(motors[handle]->read_write_mutex))
+    if(!xSemaphoreGive(motors[handle].read_write_mutex))
     {
         ESP_LOGE(LOG_TAG, "PWM_get_motor_speed: Failed to give mutex for motor %i.\n", handle);
         abort();  
     }
+
     
     return toReturn;
 }
