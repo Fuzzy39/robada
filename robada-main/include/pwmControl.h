@@ -18,11 +18,11 @@ const uint32_t PWM_TICK_HZ = 10000000; // 10 MHz
 const uint32_t PWM_PERIOD_TICKS = 1000; // 10 khz 
 const uint32_t PWM_PERIOD_HZ = PWM_TICK_HZ/PWM_PERIOD_TICKS;
 
-const uint32_t PWM_SPEED_MAX = PWM_PERIOD_TICKS;
-const uint32_t PWM_SPEED_MIN = -PWM_SPEED_MAX;
+typedef unsigned int pwm_motor_handle_t;
 
 typedef struct PwmMotor
 {
+    // We never expose this type to any users of pwm.
     mcpwm_oper_handle_t pwm_operator;
     mcpwm_cmpr_handle_t pwm_comparator;
     mcpwm_gen_handle_t pwm_gen_clockwise;
@@ -34,17 +34,10 @@ typedef struct PwmMotor
     int32_t speed; // From PWM_SPEED_MIN to PWM_SPEED_MAX
 } PwmMotor;
 
-enum Motor
-{
-    BASE_MOTOR = 0,
-    SHOULDER_MOTOR = 1,
-    ELBOW_MOTOR = 2
-};
-
 
 typedef struct MotorConfig
 {
-    Motor motor;
+    pwm_motor_handle_t motor;
     int clockwiseGpioNum;
     int counterclockwiseGpioNum;
 
@@ -63,21 +56,17 @@ void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor);
 // Claim this motor to be controlled by this task. 
 // If shouldBlock is true, blocks until this motor has been released and returns true.
 // If false, will return false if the motor is currently claimed by another task, otherwise claims the motor and returns true.
-bool PWM_claim_motor(Motor motor, bool shouldBlock); 
+bool PWM_claim_motor(pwm_motor_handle_t motor, bool shouldBlock); 
 
 // Release a motor from control by this task. 
-void PWM_release_motor(Motor motor, bool stopMotor);
+void PWM_release_motor(pwm_motor_handle_t motor, bool stopMotor);
 
 // Set motor speed, where [-1, 0) is counterclockwise, 0 is stopped, and (0, 1] is clockwise.
 // Returns false and has no effect if the motor has not been claimed.
-bool PWM_set_motor_speed(Motor motor, float speed);
+void PWM_set_motor_speed(pwm_motor_handle_t motor, float speed);
 
 // Get the current speed that a motor has been set to (not measured). [-1, 0) is counterclockwise, 0 is stopped, and (0, 1] is clockwise.
-float PWM_get_motor_speed(Motor motor);
-
-// Call this if we're crashing and burning. Stops all motors and un-asserts the motor controller enable pin. 
-// Ignores which task has claimed the motors. Future PWM calls will have no effect.
-void PWM_stop_all_motors();
+float PWM_get_motor_speed(pwm_motor_handle_t motor);
 
 
 #endif

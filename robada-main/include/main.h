@@ -9,6 +9,11 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 
+#include "pwmControl.h"
+
+
+
+
 
 // main stuff
 // ------------
@@ -18,9 +23,6 @@ void app_main(void);
 
 // app_main is already a task so this isn't strictly needed. Oh well, I felt like it.
 void main_task(void* args);
-void init_motor(MotorPinout motor);
-void drive_motor(MotorPinout motor, int motorSpeed); // very primitive.
-int changeSpeed(int prev, bool clockwise);
-
+void changeSpeed(pwm_motor_handle_t motor, bool clockwise);
 
 #endif

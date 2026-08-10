@@ -34,10 +34,15 @@ void app_main(void)
     register_gpio_button(MOTOR_CLOCKWISE_BUTTON_PIN, commandQueue, buttonClockwise);
     register_gpio_button(MOTOR_COUNTERCLOCKWISE_BUTTON_PIN, commandQueue, buttonCounterclockwise);
 
+    PWM_initialize(0, motorConfigs, sizeof(motorConfigs)/sizeof(MotorConfig));
+
+
     if(!initialize_debounce_task())
     {
         return;
     }
+
+
 
     // Start our two tasks.
     if(xTaskCreate(main_task, "robada main", 4096, NULL, DEFAULT_PRIORITY, NULL ) != pdPASS)
@@ -46,7 +51,6 @@ void app_main(void)
         return;
     }
 
-    init();
 
     ESP_LOGI(LOG_TAG, "Initialization Complete.\n");
 }
@@ -55,12 +59,16 @@ void app_main(void)
 void main_task(void* args)
 {
     bool currentMotor = false; // false for M1, true for M2.
-    int M1Speed = 0; // -1, 0, 1.
-    int M2Speed = 0;
 
-    // some initialization: Motor pins and the led we want to use.
-    // init_motor(M1_PINOUT);
-    init_motor(M2_PINOUT);
+    // register the motors with us.
+    if(!PWM_claim_motor(BASE_MOTOR, false))
+    {
+        ESP_LOGE(LOG_TAG, "Couldn't claim base motor.\n");
+    }
+    if(!PWM_claim_motor(SHOULDER_MOTOR, false))
+    {
+        ESP_LOGE(LOG_TAG, "Couldn't claim shoulder motor.\n");
+    }
 
     gpio_reset_pin(MOTOR_SELECT_LED_PIN);
     gpio_set_direction(MOTOR_SELECT_LED_PIN, GPIO_MODE_OUTPUT);
@@ -85,23 +93,18 @@ void main_task(void* args)
             case buttonClockwise:
                 if(currentMotor)
                 {
-                    M2Speed = changeSpeed(M2Speed, true);
-                    drive_motor(M2_PINOUT, M2Speed);
+                    changeSpeed(SHOULDER_MOTOR, true);
                     break;
                 }
-                // M1Speed = changeSpeed(M1Speed, true);
-                // drive_motor(M1_PINOUT, M1Speed);
+                changeSpeed(BASE_MOTOR, true);
                 break;
             case buttonCounterclockwise:
-                // yes, this code is bad, but it's extremely temporary so It'll do for now.
                 if(currentMotor)
                 {
-                    M2Speed = changeSpeed(M2Speed, false);
-                    drive_motor(M2_PINOUT, M2Speed);
+                    changeSpeed(SHOULDER_MOTOR, false);
                     break;
                 }
-                // M1Speed = changeSpeed(M1Speed, false);
-                // drive_motor(M1_PINOUT, M1Speed);
+                changeSpeed(BASE_MOTOR, false);
                 break;
             
         }
@@ -110,44 +113,13 @@ void main_task(void* args)
           
 }
 
-// temp code, almost certainly.
-void init_motor(MotorPinout motor)
+
+void changeSpeed(pwm_motor_handle_t motor, bool clockwise)
 {
-    gpio_reset_pin(motor.clockwisePin);
-    gpio_set_direction(motor.clockwisePin, GPIO_MODE_OUTPUT);
-    gpio_reset_pin(motor.counterclockwisePin);
-    gpio_set_direction(motor.counterclockwisePin, GPIO_MODE_OUTPUT);
+    float prev = PWM_get_motor_speed(motor);
+    float addTo = .2f*((int)clockwise*2-1);
+    ESP_LOGI(LOG_TAG,"Setting motor %d to speed %f.\n", motor, prev+addTo);
 
-    drive_motor(motor, 0);
-}
+    PWM_set_motor_speed(motor, prev+addTo); // the set speed function caps our speed to the max/min so we should be good.
 
-// also definitely temp, as soon as we get pwm this is gone.
-void drive_motor(MotorPinout motor, int motorSpeed)
-{
-
-    switch (motorSpeed)
-    {
-    case -1:
-        gpio_set_level(motor.clockwisePin,        false);
-        gpio_set_level(motor.counterclockwisePin, true);
-        break;
-    case 1:
-        gpio_set_level(motor.clockwisePin,        true);
-        gpio_set_level(motor.counterclockwisePin, false);
-        break;
-    default:
-        gpio_set_level(motor.clockwisePin,        false);
-        gpio_set_level(motor.counterclockwisePin, false);
-        break;
-    }
-}
-
-// also definitely temp code. and bad code, to boot.
-int changeSpeed(int prev, bool clockwise)
-{
-    int toAdd = 1*(clockwise?1:-1);
-    prev+=toAdd;
-    prev = prev>1?1:prev;
-    prev = prev<-1?-1:prev;
-    return prev;
 }
