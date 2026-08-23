@@ -1,24 +1,11 @@
-#include <stdio.h>
-#include "esp_log.h"
-
-#include "nvs_flash.h"
-#include "host/ble_hs.h"
-#include "host/ble_uuid.h"
-#include "host/util/util.h"
-#include "nimble/ble.h"
-#include "nimble/nimble_port.h"
-#include "nimble/nimble_port_freertos.h"
-#include "services/gap/ble_svc_gap.h"
+#include "ble-test.h"
 
 
 static const char* TAG = "ble-test";
 const uint16_t BLE_GAP_APPEARANCE_GENERIC_INDUSTRIAL_TOOL = 0x14C0;
+static uint8_t addressType; // will either be  BLE_ADDR_PUBLIC or BLE_ADDR_RANDOM. I think.
 
 
-// This function is in nimble but isn't in the header.
-// https://github.com/espressif/esp-nimble/issues/56
-// What does it do? Why do we want it? I have no idea. We do call it as part of initialization, though.
-void ble_store_config_init(void);
 // I have no idea what half of these functions do. They aren't documented.
 // this is frustrating.
 
@@ -29,119 +16,6 @@ inline static void format_addr(char *addr_str, uint8_t addr[])
     sprintf(addr_str, "%02X:%02X:%02X:%02X:%02X:%02X", addr[0], addr[1],
             addr[2], addr[3], addr[4], addr[5]);
 }
-
-
-static void on_stack_reset(int reason)
-{
-    /* On reset, print reset reason to console */
-    ESP_LOGI(TAG, "nimble stack reset, reset reason: %d", reason);
-}
-
-static void on_stack_sync(void) 
-{
-    // the bluetooth host and controller need to 'sync' I guess.
-    // We shouldn't do any bluetooth operations until this has happened.
-    // this callback is for when that happens, so we'll do our advertising here.
-
-    // Ensure that the device has a bluetooth address. https://github.com/apache/mynewt-nimble/blob/1e8ed60276f35a80ed4d4b4f8bb9d9c6fee53845/nimble/host/util/include/host/util/util.h#L40
-    int error = ble_hs_util_ensure_addr(false);
-    // I've come to the realization that nimble functionally only has documentation in the form of doxygen comments inside of it's headers.
-    // Which is better than nothing, but the actual documentation page it has is basically useless.
-
-    if(error)
-    {
-        ESP_LOGE(TAG, "device does not have any available bt address!");
-        return;
-    }
-
-    uint8_t addressType; // will either be  BLE_ADDR_PUBLIC or BLE_ADDR_RANDOM. I think.
-    // SHOCKINGLY - this is the first nimble function that is in the documentation so far. All of main and everywhere else - undocumented.
-    error = ble_hs_id_infer_auto(false, &addressType); // Not sure what this number it returns is, but it claims to be an address type.
-                                                         // there are 4 address types as I understand. Public, random, resolvable random private and unresolvable random private.
-                                                         // Random is probably what we're using?
-    if (error)
-    {
-        ESP_LOGE(TAG, "failed to infer address type, error code: %d", error);
-        return;
-    }
-
-    // get the 48-bit bluetooth address that we'll be using.
-    uint8_t bluetoothAddr[6];
-    error = ble_hs_id_copy_addr(addressType, bluetoothAddr, NULL);
-    if (error)
-    {
-        ESP_LOGE(TAG, "failed to copy device address, error code: %d", error);
-        return;
-    }
-
-    char addrString[18];
-    format_addr(addrString, bluetoothAddr);
-    ESP_LOGI(TAG, "device address: %s", addrString);
-
-    // Now we can actually try to advertise...
-    // Well, we need to set up a bunch of data structures first actually.
-
-    // This is the data we're sending in the advertisement.
-
-    struct ble_hs_adv_fields adv_fields = {0};
-    adv_fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-
-    const char *name;
-    name = ble_svc_gap_device_name(); // I guess we're getting the name from when we set it earlier? Okay, I guess.
-    adv_fields.name = (uint8_t *)name;
-    adv_fields.name_len = strlen(name);
-    adv_fields.name_is_complete = 1;
-
-    /* Set device tx power */
-    adv_fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO; // Auto power level..
-    adv_fields.tx_pwr_lvl_is_present = 1;
-
-    /* Set device appearance */
-    adv_fields.appearance = BLE_GAP_APPEARANCE_GENERIC_INDUSTRIAL_TOOL; 
-    adv_fields.appearance_is_present = 1;
-
-    /* Set device LE role */
-    adv_fields.le_role = MYNEWT_VAL_BLE_ROLE_PERIPHERAL; // this isn't what the example has, but gcc suggested it, as what the example has apparently doesn't exist.
-    adv_fields.le_role_is_present = 1;
-
-    // So all of this stuff will be sent when we advertise, I guess.
-    error = ble_gap_adv_set_fields(&adv_fields);
-    if (error) 
-    {
-        ESP_LOGE(TAG, "failed to set advertising data, error code: %d", error);
-        return;
-    }
-
-    struct ble_gap_adv_params adv_params = {0};
-    /* Set non-connetable and general discoverable mode to be a beacon */
-    adv_params.conn_mode = BLE_GAP_CONN_MODE_NON;
-    adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
-
-    /* Start advertising */
-    error = ble_gap_adv_start(addressType, NULL, BLE_HS_FOREVER, &adv_params,
-                           NULL, NULL);
-    if (error)
-    {
-        ESP_LOGE(TAG, "failed to start advertising, error code: %d", error);
-        return;
-    }
-    ESP_LOGI(TAG, "advertising started!");
-
-
-}
-
-static void nimble_host_task(void *param) 
-{
-    /* Task entry log */
-    ESP_LOGI(TAG, "nimble host task has been started!");
-
-    /* This function won't return until nimble_port_stop() is executed */
-    nimble_port_run();
-
-    /* Clean up at exit */
-    vTaskDelete(NULL);
-}
-
 
 
 void app_main(void)
@@ -208,3 +82,180 @@ void app_main(void)
     /* Start NimBLE host task thread and return */
     xTaskCreate(nimble_host_task, "NimBLE Host", 4*1024, NULL, 5, NULL);
 }
+
+
+void nimble_host_task(void *param) 
+{
+    /* Task entry log */
+    ESP_LOGI(TAG, "nimble host task has been started!");
+
+    /* This function won't return until nimble_port_stop() is executed */
+    nimble_port_run();
+
+    /* Clean up at exit */
+    vTaskDelete(NULL);
+}
+
+
+void on_stack_reset(int reason)
+{
+    /* On reset, print reset reason to console */
+    ESP_LOGI(TAG, "nimble stack reset, reset reason: %d", reason);
+}
+
+void on_stack_sync(void) 
+{
+    // the bluetooth host and controller need to 'sync' I guess.
+    // We shouldn't do any bluetooth operations until this has happened.
+    // this callback is for when that happens, so we'll do our advertising here.
+
+    // Ensure that the device has a bluetooth address. https://github.com/apache/mynewt-nimble/blob/1e8ed60276f35a80ed4d4b4f8bb9d9c6fee53845/nimble/host/util/include/host/util/util.h#L40
+    int error = ble_hs_util_ensure_addr(false);
+    // I've come to the realization that nimble functionally only has documentation in the form of doxygen comments inside of it's headers.
+    // Which is better than nothing, but the actual documentation page it has is basically useless.
+
+    if(error)
+    {
+        ESP_LOGE(TAG, "device does not have any available bt address!");
+        return;
+    }
+
+    // SHOCKINGLY - this is the first nimble function that is in the documentation so far. All of main and everywhere else - undocumented.
+    error = ble_hs_id_infer_auto(false, &addressType); // Not sure what this number it returns is, but it claims to be an address type.
+                                                         // there are 4 address types as I understand. Public, random, resolvable random private and unresolvable random private.
+                                                         // Random is probably what we're using?
+    if (error)
+    {
+        ESP_LOGE(TAG, "failed to infer address type, error code: %d", error);
+        return;
+    }
+
+    // get the 48-bit bluetooth address that we'll be using.
+    uint8_t bluetoothAddr[6];
+    error = ble_hs_id_copy_addr(addressType, bluetoothAddr, NULL);
+    if (error)
+    {
+        ESP_LOGE(TAG, "failed to copy device address, error code: %d", error);
+        return;
+    }
+
+    char addrString[18];
+    format_addr(addrString, bluetoothAddr);
+    ESP_LOGI(TAG, "device address: %s", addrString);
+
+    start_advertising();
+
+}
+
+// because I'm not using a header, the deeper parts of the program go first.
+// This deals with gap events, so trying to connect and stuff like that, I think.
+int gap_event_handler(struct ble_gap_event *event, void *arg)
+{
+    switch (event->type)
+    {
+    case BLE_GAP_EVENT_CONNECT:
+        return gap_event_connect_handler(event, arg);
+    
+       
+    case BLE_GAP_EVENT_DISCONNECT:
+        /* A connection was terminated, print connection descriptor */
+        ESP_LOGI(TAG, "disconnected from peer; reason=%d",
+                 event->disconnect.reason);
+
+        /* Restart advertising */
+        start_advertising();
+        return 0;
+
+    /* Connection parameters update event */
+    case BLE_GAP_EVENT_CONN_UPDATE:
+        /* The central has updated the connection parameters. */
+        ESP_LOGI(TAG, "connection updated; status=%d",
+                    event->conn_update.status);
+
+        return 0;
+    default:
+        break;
+    }
+
+    return 0;
+}
+
+int gap_event_connect_handler(struct ble_gap_event *event, void *arg)
+{
+
+    ESP_LOGI(TAG, "connection %s; status=%d",
+            event->connect.status == 0 ? "established" : "failed",
+            event->connect.status);
+    if(event->connect.status != 0)
+    {
+        // The connection had some sort of error.
+        start_advertising();
+        return 0;
+    }
+
+    // The connection formed... There's some sort of something we need to do.
+    // actually we don't *need* to do anything, really. not yet.
+    return 0;
+}
+
+void start_advertising()
+{
+    // Now we can actually try to advertise...
+    // Well, we need to set up a bunch of data structures first actually.
+
+    // This is the data we're sending in the advertisement.
+
+    struct ble_hs_adv_fields adv_fields = {0};
+    adv_fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+
+    const char *name;
+    name = ble_svc_gap_device_name(); // I guess we're getting the name from when we set it earlier? Okay, I guess.
+    adv_fields.name = (uint8_t *)name;
+    adv_fields.name_len = strlen(name);
+    adv_fields.name_is_complete = 1;
+
+    /* Set device tx power */
+    adv_fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO; // Auto power level..
+    adv_fields.tx_pwr_lvl_is_present = 1;
+
+    /* Set device appearance */
+    adv_fields.appearance = BLE_GAP_APPEARANCE_GENERIC_INDUSTRIAL_TOOL; 
+    adv_fields.appearance_is_present = 1;
+
+    /* Set device LE role */
+    adv_fields.le_role = MYNEWT_VAL_BLE_ROLE_PERIPHERAL; // this isn't what the example has, but gcc suggested it, as what the example has apparently doesn't exist.
+    adv_fields.le_role_is_present = 1;
+
+    // set advertising interval (as advertised)
+    adv_fields.adv_itvl = BLE_GAP_ADV_ITVL_MS(50);
+    adv_fields.adv_itvl_is_present = 1;
+
+    // So all of this stuff will be sent when we advertise, I guess.
+    int error = ble_gap_adv_set_fields(&adv_fields);
+    if (error) 
+    {
+        ESP_LOGE(TAG, "failed to set advertising data, error code: %d", error);
+        return;
+    }
+
+    struct ble_gap_adv_params adv_params = {0};
+    /* Set non-connetable and general discoverable mode to be a beacon */
+    adv_params.conn_mode = BLE_GAP_CONN_MODE_UND; // Undirected, connectable.
+    adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
+
+    // actually set the advertising interval (at least I think)
+    adv_params.itvl_min = BLE_GAP_ADV_ITVL_MS(50);
+    adv_params.itvl_max = BLE_GAP_ADV_ITVL_MS(60);
+
+    /* Start advertising */
+    error = ble_gap_adv_start(addressType, NULL, BLE_HS_FOREVER, &adv_params,
+                           gap_event_handler, NULL);
+    if (error)
+    {
+        ESP_LOGE(TAG, "failed to start advertising, error code: %d", error);
+        return;
+    }
+    ESP_LOGI(TAG, "advertising started!");
+}
+
+
