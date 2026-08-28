@@ -1,114 +1,100 @@
 package io.github.fuzzy39.robada.pcApp;
 
-import java.util.List;
 
-import org.simplejavable.Adapter;
-import org.simplejavable.Characteristic;
-import org.simplejavable.Peripheral;
-import org.simplejavable.Service;
 
-public class Main
+import java.io.IOException;
+
+import javax.swing.Action;
+
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+// javafx
+import javafx.application.Application;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.geometry.Point2D;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.stage.Stage;
+import javafx.util.Duration;
+
+public class Main extends Application
 {
-    // This is more or less just the example code from the simpleble docs right now.
-    public static void main(String[] args) throws Exception
+
+    private InputDevice inputDevice = null;
+    Label l;
+    
+    public static void main(String[] args) 
     {
-        if(!Adapter.isBluetoothEnabled())
-        {
-            System.err.println("Bluetooth is not enabled.");
-            return;
-        }
-
-        List<Adapter> adapters = Adapter.getAdapters();
-        if (adapters.isEmpty())
-        {
-            System.err.println("No Bluetooth adapters found.");
-            return;
-        }
-
-        Adapter adapter = adapters.get(0);
-        System.out.println("Using adapter: " + adapter.getIdentifier() + " [" + adapter.getAddress() + "]");
-
-        // Adapter.EventListener is an interface. Here, we implement that interface with an anonymous class.
-        adapter.setEventListener(new Adapter.EventListener() 
-        {
-            @Override
-            public void onScanFound(Peripheral peripheral)
-            {
-                System.out.println("Found: " + peripheral.getIdentifier()
-                    + " [" + peripheral.getAddress() + "] "
-                    + peripheral.getRssi() + " dBm");
-            }
-        });
-
-        // number in ms.
-        adapter.scanFor(5000);
-
-        // Let's look for the esp...
-        System.out.println("Scan results:");
-        String deviceName = "ESP_Test";
-
-        Peripheral selected = null;
-
-        for (Peripheral peripheral : adapter.scanGetResults()) 
-        {
-            if(peripheral.getIdentifier().equals(deviceName))
-            {
-                selected = peripheral;
-            }
-        }
-
-
-        if(selected == null)
-        {
-            System.out.println("Didn't find ESP...");
-            return;
-        }
-
-        final Peripheral esp = selected;
-        System.out.println("ESP: "+esp.getIdentifier()+" ["+esp.getAddress()+"] Connectable: "+esp.isConnectable());
-        if(!esp.isConnectable())
-        {
-            System.out.println("ESP not connectable.");
-            return;
-        }
-
-        class PeripheralCallback implements Peripheral.EventListener 
-        {
-            @Override
-            public void onConnected() 
-            {
-                System.out.println("MTU: " + esp.getMtu());
-                /*for (Service service : esp.services())
-                {
-                    System.out.println("Service: " + service.uuid());
-                    for (Characteristic characteristic : service.characteristics())
-                    {
-                        System.out.println("  Characteristic: " + characteristic.uuid());
-                        System.out.println("    read=" + characteristic.canRead()
-                            + " notify=" + characteristic.canNotify()
-                            + " writeRequest=" + characteristic.canWriteRequest()
-                            + " writeCommand=" + characteristic.canWriteCommand());
-                    }
-                }*/
-            }
-
-            @Override
-            public void onDisconnected() {
-                System.out.println("Disconnected.");
-                System.exit(0);
-            }
-        }
-
-        esp.setEventListener(new PeripheralCallback());
-        esp.connect();
-
-        // Do... Something.
-        // stolen from the connect example
-     
-        Thread.sleep(2000);
-        System.out.println("Disconnecting...");
-        esp.disconnect();
-        System.exit(0);
-
+        launch();
     }
+
+
+    @Override
+    public void start(Stage stage) 
+    {
+
+        // default text.
+        l = new Label("Controller Not Connected. If you've connected a controller, restart the application.");
+        // Canvas canvas = new Canvas(250,250);
+        // GraphicsContext gc = canvas.getGraphicsContext2D();
+
+        // gc.setFill(Color.BLUE);
+        // gc.fillRect(75,75,100,100);
+        
+        StickDisplay disp = new StickDisplay(250, ()->update());
+         // Try to aquire a controller.
+        tryGetController();
+       
+
+        Scene scene = new Scene(new VBox(l, disp), 640, 480);
+        stage.setScene(scene);
+        stage.show();
+
+
+
+
+        // test code
+      
+    }
+
+    private Point2D update()
+    {
+        if(inputDevice == null)
+        {
+            // If we failed to get a controller, JInput will not give us another. Give up.
+            return new Point2D(0,0);
+        }
+
+        try
+        {
+            inputDevice.update();
+        }
+        catch(IOException e)
+        {
+            // controller was disconnected.
+            System.out.println("Disconnect!");
+            l.setText("Controller Disconnected. Restart the application with a controller connected.");
+            inputDevice = null;
+             return new Point2D(0,0);
+        }
+
+        System.out.println(inputDevice.getPosition());
+        return inputDevice.getPosition(); 
+    }
+
+    private void tryGetController()
+    {
+        if(!InputDevice.getValidControllers().isEmpty())
+        {
+            inputDevice = new InputDevice(InputDevice.getValidControllers().get(0));
+            l.setText("Controller: "+inputDevice.getController().getName());
+        }
+    }
+
 }
