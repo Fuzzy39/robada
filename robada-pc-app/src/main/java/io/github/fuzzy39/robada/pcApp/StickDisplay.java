@@ -54,6 +54,9 @@ public class StickDisplay extends Canvas
         // the actual thumbstick
         gc.setFill(Color.color(.9,.85,.8));
         double stickSize = STICK_SIZE_RATIO*size;
+
+        // assuming that the position of the thumbstick is anywhere within the unit circle, we want to find the center of a circle
+        // of diameter size*STICK_SIZE_RATIO inside a circle of diameter size.
         Point2D center = pointSource.getAsPoint2D().multiply((1-STICK_SIZE_RATIO)*(size/2)).add(new Point2D(size/2, size/2));
         Point2D topLeft = center.subtract(new Point2D(stickSize/2, stickSize/2));   
 
