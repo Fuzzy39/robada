@@ -46,8 +46,7 @@ public class StickDisplay extends Canvas
         double size = this.heightProperty().get();
 
         // background
-        gc.setFill(Color.color(.5,.5,.5));
-        gc.fillRect(0, 0, size, size);
+        gc.clearRect(0, 0, size, size);
 
         gc.setFill(Color.color(.2,.25,.3));
         gc.fillOval(0, 0, size, size);
@@ -55,10 +54,9 @@ public class StickDisplay extends Canvas
         // the actual thumbstick
         gc.setFill(Color.color(.9,.85,.8));
         double stickSize = STICK_SIZE_RATIO*size;
-        Point2D center = pointSource.getAsPoint2D().multiply(STICK_SIZE_RATIO*(size/2)).add(new Point2D(size/2, size/2));
+        Point2D center = pointSource.getAsPoint2D().multiply((1-STICK_SIZE_RATIO)*(size/2)).add(new Point2D(size/2, size/2));
         Point2D topLeft = center.subtract(new Point2D(stickSize/2, stickSize/2));   
-        System.out.println(topLeft);
-        System.out.println(center);
+
         gc.fillOval(topLeft.getX(), topLeft.getY(), stickSize, stickSize);     
 
     }

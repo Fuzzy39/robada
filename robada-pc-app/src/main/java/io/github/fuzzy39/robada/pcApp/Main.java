@@ -47,7 +47,7 @@ public class Main extends Application
         // gc.setFill(Color.BLUE);
         // gc.fillRect(75,75,100,100);
         
-        StickDisplay disp = new StickDisplay(250, ()->update());
+        StickDisplay disp = new StickDisplay(150, ()->update());
          // Try to aquire a controller.
         tryGetController();
        
