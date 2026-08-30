@@ -1,4 +1,6 @@
 #include "pwmControl.h"
+#include "private/pwmControl.h"
+
 #include <limits.h>
 #include <math.h>
 

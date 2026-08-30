@@ -19,32 +19,12 @@
 
 
 
-
-typedef struct PwmMotor
-{
-    // We never expose this type to any users of pwm.
-    mcpwm_oper_handle_t pwm_operator;
-    mcpwm_cmpr_handle_t pwm_comparator;
-    mcpwm_gen_handle_t pwm_gen_clockwise;
-    mcpwm_gen_handle_t pwm_gen_counterclockwise;
-
-    SemaphoreHandle_t owner_mutex; // mutex to keep track of which task owns the motor (and is allowed to set the speed of it)
-    SemaphoreHandle_t read_write_mutex; // mutual exclusion when reading/writing speed. Non-owners can read the speed of the motor, but not write it.
-
-    float speed; // From PWM_SPEED_MIN to PWM_SPEED_MAX
-} PwmMotor;
-
-
-
-
 /// @brief Initialize PWM motor control.
 /// @param motorEnable the gpio_num_t of the pin connected to the motor controller enable lines.
 /// @param motorPinouts An array of MotorPinout structs. 
 /// @param numMotors The number of elements in motorPinouts. Should be no greater than 3.
 void PWM_initialize(gpio_num_t motorEnable, const MotorConfig* motors, size_t numMotors);
 
-// Private function to initialize a single motor.
-void PWM_setup_motor(const MotorConfig* config, PwmMotor* motor);
 
 // Claim this motor to be controlled by this task. 
 // If shouldBlock is true, blocks until this motor has been released and returns true.
