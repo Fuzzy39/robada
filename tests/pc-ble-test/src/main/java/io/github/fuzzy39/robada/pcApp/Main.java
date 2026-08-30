@@ -173,13 +173,12 @@ public class Main extends Thread
 
         read();
 
-
         for(int i = 0; i<10; i++)
         {
             // write a random byte
             byte[] bytes = {0};
             new Random().nextBytes(bytes);
-            System.out.printf("Writing %H to Characteristic...\n", bytes[0]);
+            System.out.printf("Writing %02X to Characteristic...\n", bytes[0]);
             esp.writeRequest(serviceUUID, characteristicUUID, bytes);
 
             read();
@@ -208,7 +207,7 @@ public class Main extends Thread
         {
             System.out.println("Got length "+bytes.length+" instead of 1.");
         }
-        System.out.printf("Characteristic has value %H.\n", bytes[0]);
+        System.out.printf("Characteristic has value %02X.\n", bytes[0]);
         return bytes[0];
     }
 }

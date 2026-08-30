@@ -10,8 +10,6 @@ static uint8_t addressType; // will either be  BLE_ADDR_PUBLIC or BLE_ADDR_RANDO
 static const ble_uuid16_t auto_io_svc_uuid = BLE_UUID16_INIT(0x1815);
 static uint16_t test_characteristic_value_attribute_handle;
 
-static const uint8_t[16] uuid128 = {}
-
 static const ble_uuid128_t test_characteristic_uuid =
     BLE_UUID128_INIT(0x23, 0xd1, 0xbc, 0xea, 0x5f, 0x78, 0x23, 0x15, 0xde, 0xef,
                      0x12, 0x12, 0x25, 0x15, 0x00, 0x00);
@@ -407,6 +405,7 @@ static int on_test_characteristic_access(uint16_t conn_handle, uint16_t attr_han
 
         // actually write the data.
         testData = context->om->om_data[0];
+        ESP_LOGI(TAG, "Wrote %x as test charactaristic.", testData);
         return 0;
     
     case BLE_GATT_ACCESS_OP_READ_CHR:
@@ -424,9 +423,17 @@ static int on_test_characteristic_access(uint16_t conn_handle, uint16_t attr_han
         // it is entirely unclear to me if we need to allocate this buffer or not. No idea. Documentation does not say.
         // Looking at the code, no. Do I need to set the length?
         // Seems like yes? maybe?
-        context->om->om_data[0] = testData;
-        context->om->om_len = 1;
-        return 0;
+        ESP_LOGI(TAG, "Read %x as test charactaristic.", testData);
+
+        // nope, don't
+        //context->om->om_data[0] = testData;
+        //context->om->om_len = 1;
+
+        int error = os_mbuf_append(context->om, &testData,
+                                sizeof testData);
+
+        return error == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+  
 
     /* Unknown event */
     default:
