@@ -51,4 +51,9 @@ extern const size_t numMotors;
 // I was too lazy to make this one extern as well. If we set up actual priorities later I will.
 static const UBaseType_t DEFAULT_PRIORITY = 1;
 
+
+// bluetooth
+extern const char* DEVICE_NAME;
+
+
 #endif

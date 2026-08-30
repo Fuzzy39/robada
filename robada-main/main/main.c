@@ -39,7 +39,7 @@ void app_main(void)
         return;
     }
 
-
+    bluetooth_initialize(); // should be called only after all services are added.
 
     // Start our two tasks.
     if(xTaskCreate(main_task, "robada main", 4096*2, NULL, DEFAULT_PRIORITY, NULL ) != pdPASS)

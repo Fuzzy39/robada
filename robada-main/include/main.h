@@ -12,6 +12,7 @@
 #include "defines.h"
 #include "pwmControl.h"
 #include "buttonDebounce.h"
+#include "bluetooth.h"
 
 
 

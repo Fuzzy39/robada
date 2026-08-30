@@ -24,3 +24,5 @@ const MotorConfig motorConfigs[] =
 };
 
 const size_t numMotors = 2;
+
+const char* DEVICE_NAME = "Robada";

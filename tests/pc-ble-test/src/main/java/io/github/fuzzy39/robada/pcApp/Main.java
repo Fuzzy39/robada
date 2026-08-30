@@ -1,5 +1,6 @@
 package io.github.fuzzy39.robada.pcApp;
 
+
 import java.util.List;
 import java.util.Random;
 
@@ -46,12 +47,14 @@ public class Main extends Thread
             }
         });
 
+        String deviceName = "Robada";//"ESP_Test";
+        System.out.println("Looking for '"+deviceName+"'.");
         // number in ms.
         adapter.scanFor(5000);
 
         // Let's look for the esp...
         System.out.println("Scan results:");
-        String deviceName = "ESP_Test";
+
 
         Peripheral selected = null;
 
