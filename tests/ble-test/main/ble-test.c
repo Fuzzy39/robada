@@ -6,6 +6,44 @@ const uint16_t BLE_GAP_APPEARANCE_GENERIC_INDUSTRIAL_TOOL = 0x14C0;
 static uint8_t addressType; // will either be  BLE_ADDR_PUBLIC or BLE_ADDR_RANDOM. I think.
 
 
+/* GATT services table */
+static const ble_uuid16_t auto_io_svc_uuid = BLE_UUID16_INIT(0x1815);
+static uint16_t test_characteristic_value_attribute_handle;
+
+static const uint8_t[16] uuid128 = {}
+
+static const ble_uuid128_t test_characteristic_uuid =
+    BLE_UUID128_INIT(0x23, 0xd1, 0xbc, 0xea, 0x5f, 0x78, 0x23, 0x15, 0xde, 0xef,
+                     0x12, 0x12, 0x25, 0x15, 0x00, 0x00);
+
+
+static const struct ble_gatt_svc_def gatt_svr_svcs[] = 
+{
+    /* Automation IO service */
+    {
+        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid = &auto_io_svc_uuid.u,
+        .characteristics =
+            (struct ble_gatt_chr_def[]){/* LED characteristic */
+                                        {.uuid = &test_characteristic_uuid.u,
+                                         .access_cb = on_test_characteristic_access,
+                                         .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_READ    ,
+                                         .val_handle = &test_characteristic_value_attribute_handle},
+                                        {0}},
+    },
+
+    {
+        0, /* No more services. */
+    },
+};
+
+
+
+
+
+
+
+
 // I have no idea what half of these functions do. They aren't documented.
 // this is frustrating.
 
@@ -62,11 +100,16 @@ void app_main(void)
         abort();
     }
 
+    /* GATT server initialization */
+    gatt_server_init();
+ 
+
 
     // Apparently the host and controller have to be synced, and might not always be. So we have functions we can call if that's the case.
     /* Set host callbacks */
     ble_hs_cfg.reset_cb = on_stack_reset; // the bluetooth stack is reset if a significant error occurs.
     ble_hs_cfg.sync_cb = on_stack_sync; 
+    ble_hs_cfg.gatts_register_cb = on_gatt_resource_register;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr; // Litterally no idea what this is...
     // Ah https://github.com/apache/mynewt-nimble/blob/1e8ed60276f35a80ed4d4b4f8bb9d9c6fee53845/nimble/host/include/host/ble_hs.h#L272
     // I guess, for a connection or something, bluetooth needs to store stuff. If we run out of space or something like that, this function is called.
@@ -257,5 +300,141 @@ void start_advertising()
     }
     ESP_LOGI(TAG, "advertising started!");
 }
+
+void on_gatt_resource_register(struct ble_gatt_register_ctxt *ctxt, void *arg)
+{
+    // I stole this from the example but I think it's relatively straightforward.
+    /* Local variables */
+    char buf[BLE_UUID_STR_LEN];
+
+    /* Handle GATT attributes register events */
+    switch (ctxt->op) {
+
+    /* Service register event */
+    case BLE_GATT_REGISTER_OP_SVC:
+        ESP_LOGD(TAG, "registered service %s with handle=%d",
+                 ble_uuid_to_str(ctxt->svc.svc_def->uuid, buf),
+                 ctxt->svc.handle);
+        break;
+
+    /* Characteristic register event */
+    case BLE_GATT_REGISTER_OP_CHR:
+        ESP_LOGD(TAG,
+                 "registering characteristic %s with "
+                 "def_handle=%d val_handle=%d",
+                 ble_uuid_to_str(ctxt->chr.chr_def->uuid, buf),
+                 ctxt->chr.def_handle, ctxt->chr.val_handle);
+        break;
+
+    /* Descriptor register event */
+    case BLE_GATT_REGISTER_OP_DSC:
+        ESP_LOGD(TAG, "registering descriptor %s with handle=%d",
+                 ble_uuid_to_str(ctxt->dsc.dsc_def->uuid, buf),
+                 ctxt->dsc.handle);
+        break;
+
+    /* Unknown event */
+    default:
+        assert(0);
+        break;
+    }
+}
+
+void gatt_server_init()
+{
+    int error;
+
+    /* 1. GATT service initialization */
+    ble_svc_gatt_init();
+
+    /* 2. Update GATT services counter */
+    // I guess this allocates space or something???
+    error = ble_gatts_count_cfg(gatt_svr_svcs);
+    if (error) 
+    {
+        ESP_LOGE(TAG, "failed to update GATT servicices counter, error code: %d", error);
+        return;
+    }
+
+    /* 3. Add GATT services */
+    // Queues them for registration. When the gatt server is started, they will be registered.
+    error = ble_gatts_add_svcs(gatt_svr_svcs);
+    if (error) 
+    {
+        ESP_LOGE(TAG, "failed to add GATT services, error code: %d", error);
+        return;
+    }
+}
+
+static int on_test_characteristic_access(uint16_t conn_handle, uint16_t attr_handle,
+                          struct ble_gatt_access_ctxt *context, void *arg)
+{
+    static uint8_t testData = 0x00; 
+    /* Handle access events */
+    /* Note: LED characteristic is write only */
+    switch (context->op) 
+    {
+    /* Write characteristic event */
+    case BLE_GATT_ACCESS_OP_WRITE_CHR:
+        /* Verify connection handle */
+
+        if (conn_handle != BLE_HS_CONN_HANDLE_NONE)
+        {
+            ESP_LOGI(TAG, "characteristic write; conn_handle=%d attr_handle=%d",
+                     conn_handle, attr_handle);
+        }
+        else
+        {
+            // Why would this ever happen?
+            ESP_LOGI(TAG,
+                     "characteristic write by nimble stack; attr_handle=%d",
+                     attr_handle);
+        }
+
+        /* Verify attribute handle */
+        if (attr_handle != test_characteristic_value_attribute_handle)
+        {
+            ESP_LOGE(TAG, "Unexpected Attribute for test characteristic callback. opcode: %d, attribute handle:%d", context->op, attr_handle);
+            break;
+        }
+
+        /* Verify access buffer length */
+        if (context->om->om_len != 1) {
+            ESP_LOGE(TAG, "Wrong length for test characteristic callback. opcode: %d, got: %d, expected: 1", context->op, context->om->om_len);
+            return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+        
+        }
+
+        // actually write the data.
+        testData = context->om->om_data[0];
+        return 0;
+    
+    case BLE_GATT_ACCESS_OP_READ_CHR:
+        ESP_LOGI(TAG, "characteristic read; conn_handle=%d attr_handle=%d", conn_handle, attr_handle);
+
+        /* Verify attribute handle */
+        if (attr_handle != test_characteristic_value_attribute_handle)
+        {
+            ESP_LOGE(TAG, "Unexpected Attribute for test characteristic callback. opcode: %d, attribute handle:%d", context->op, attr_handle);
+            break;
+        }
+
+        // I guess we write the data? 
+
+        // it is entirely unclear to me if we need to allocate this buffer or not. No idea. Documentation does not say.
+        // Looking at the code, no. Do I need to set the length?
+        // Seems like yes? maybe?
+        context->om->om_data[0] = testData;
+        context->om->om_len = 1;
+        return 0;
+
+    /* Unknown event */
+    default:
+        ESP_LOGE(TAG, "unexpected access operation to test characteristic, opcode: %d", context->op);
+    }
+
+    return BLE_ATT_ERR_UNLIKELY;
+}
+
 
 
