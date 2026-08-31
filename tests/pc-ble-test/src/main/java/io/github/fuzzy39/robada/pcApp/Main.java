@@ -1,6 +1,7 @@
 package io.github.fuzzy39.robada.pcApp;
 
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Random;
 
@@ -15,7 +16,10 @@ public class Main extends Thread
     static Peripheral esp;
 
     BluetoothUUID serviceUUID = new BluetoothUUID("00001815-0000-1000-8000-00805f9b34fb");
-    BluetoothUUID characteristicUUID = new BluetoothUUID("00001525-1212-efde-1523-785feabcd123");
+    //BluetoothUUID characteristicUUID = new BluetoothUUID("00001525-1212-efde-1523-785feabcd123");
+    BluetoothUUID motor1 = new BluetoothUUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbb0001");
+    BluetoothUUID motor2 = new BluetoothUUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbb0101");
+
 
     // This is more or less just the example code from the simpleble docs right now.
     public static void main(String[] args) throws Exception
@@ -41,16 +45,16 @@ public class Main extends Thread
             @Override
             public void onScanFound(Peripheral peripheral)
             {
-                System.out.println("Found: " + peripheral.getIdentifier()
+                /*System.out.println("Found: " + peripheral.getIdentifier()
                     + " [" + peripheral.getAddress() + "] "
-                    + peripheral.getRssi() + " dBm");
+                    + peripheral.getRssi() + " dBm");*/
             }
         });
 
         String deviceName = "Robada";//"ESP_Test";
         System.out.println("Looking for '"+deviceName+"'.");
         // number in ms.
-        adapter.scanFor(5000);
+        adapter.scanFor(2000);
 
         // Let's look for the esp...
         System.out.println("Scan results:");
@@ -157,7 +161,7 @@ public class Main extends Thread
             {
                 for (Characteristic characteristic : service.characteristics())
                 {
-                   if(characteristic.uuid().equals(characteristicUUID.toString()))
+                   if(characteristic.uuid().equals(motor1.toString()))
                    {
                         testChar = characteristic;
                    }
@@ -174,27 +178,18 @@ public class Main extends Thread
             return;
         }
 
-        read();
+        write(motor1, .5f);
+        try{Thread.sleep(1500);}
+        catch(InterruptedException e){}
+        write(motor1, 0);
+        try{Thread.sleep(1000);}
+        catch(InterruptedException e){}
 
-        for(int i = 0; i<10; i++)
-        {
-            // write a random byte
-            byte[] bytes = {0};
-            new Random().nextBytes(bytes);
-            System.out.printf("Writing %02X to Characteristic...\n", bytes[0]);
-            esp.writeRequest(serviceUUID, characteristicUUID, bytes);
+        write(motor2, -.2f);
+        try{Thread.sleep(1500);}
+        catch(InterruptedException e){}
+        write(motor2, 0);
 
-            read();
-
-            try
-            {
-                Thread.sleep(1000); // I feel like having what sorta ammounts to a spinlock isn't great but idk what else to do.
-            }
-            catch(InterruptedException e)
-            {
-                // do nothing.
-            }
-        }
 
         System.out.println("All done! Exiting...");
         esp.disconnect();
@@ -202,15 +197,50 @@ public class Main extends Thread
         
     }
 
-    private byte read()
+    private void write(BluetoothUUID characteristic, float value)
+    {
+        byte[] bytes =  ByteBuffer.allocate(4).putFloat(value).array();  
+        byte reversed[] = new byte[4];
+        for(int i = 0; i<4; i++)
+        {
+            reversed[i]= bytes[3-i];
+        } 
+
+        //printBytes("Write Data: ", reversed);
+        System.out.printf("Writing %f to %s\n", value, characteristic);
+        esp.writeRequest(serviceUUID, characteristic, reversed);
+    }
+
+    private float read(BluetoothUUID characteristic)
     {
     
-        byte[] bytes = esp.read(serviceUUID, characteristicUUID);
-        if(bytes.length != 1)
+        byte[] bytes = esp.read(serviceUUID, characteristic);
+        
+      
+        if(bytes.length != 4)
         {
-            System.out.println("Got length "+bytes.length+" instead of 1.");
+            System.out.println("Got length "+bytes.length+" instead of 4.");
+            return 0;
         }
-        System.out.printf("Characteristic has value %02X.\n", bytes[0]);
-        return bytes[0];
+        
+        byte reversed[] = new byte[4];
+        for(int i = 0; i<4; i++)
+        {
+            reversed[i]= bytes[3-i];
+        }
+    
+        printBytes("Read Data: ", reversed);
+        float speed = ByteBuffer.wrap(reversed).getFloat();
+        System.out.printf("Characteristic has value %f.\n", speed);
+        return speed;
+    }
+
+
+    private void printBytes(String prefix, byte[] bytes)
+    {
+        System.out.print(prefix);
+        for(int  i = 0; i<bytes.length; i++) System.out.printf("%02X", bytes[i]);
+        System.out.println();
+     
     }
 }
