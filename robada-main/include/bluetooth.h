@@ -3,20 +3,20 @@
 
 
 #include "host/ble_gatt.h"
+#include "host/ble_uuid.h"
 #include "defines.h"
 
 
-static const uint8_t base_uuid[16] = {0x00, 0x00, 0xbc, 0xea, 0x5f, 0x78, 0x23, 0x15, 0xde, 0xef,
-                     0x12, 0x12, 0x25, 0x15, 0x00, 0x00};
-                     
+void bluetooth_initialize();
 
-
-
+// Creates a UUID on the heap. Caller is responsible for freeing the memory.
+ble_uuid_t* bluetooth_create_uuid(uint8_t file, uint8_t obj);
 
 // Add a ble service.
 void bluetooth_add_services(struct ble_gatt_svc_def* service_definitions);
 
-void bluetooth_initialize();
+
+
 
 
 

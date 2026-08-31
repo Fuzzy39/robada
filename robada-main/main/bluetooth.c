@@ -4,6 +4,11 @@
 static const char* TAG = "bluetooth";
 const uint16_t BLE_GAP_APPEARANCE_GENERIC_INDUSTRIAL_TOOL = 0x14C0;
 
+#define UUID_SIZE 16
+
+const uint8_t base_uuid[UUID_SIZE] = {0x00, 0x00, 0xbc, 0xea, 0x5f, 0x78, 0x23, 0x15, 0xde, 0xef,
+                     0x12, 0x12, 0x25, 0x15, 0x00, 0x00};
+
 static uint8_t addressType; // will either be  BLE_ADDR_PUBLIC or BLE_ADDR_RANDOM. I think.
 
 inline static void format_addr(char *addr_str, uint8_t addr[]) 
@@ -33,6 +38,14 @@ void bluetooth_add_services(struct ble_gatt_svc_def* service_definitions)
         abort();
     }
 }
+
+ble_uuid_t* bluetooth_create_uuid(uint8_t file, uint8_t obj)
+{
+    uint8_t* uuid = malloc(sizeof(uint8_t)*UUID_SIZE);
+    memcpy(uuid, base_uuid, UUID_SIZE);
+    return BLE_UUID16_DECLARE(*uuid);
+}
+
 
 void bluetooth_initialize()
 {

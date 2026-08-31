@@ -14,6 +14,8 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
+#include <string.h>
+
 // This function is in nimble but isn't in the header.
 // https://github.com/espressif/esp-nimble/issues/56
 // What does it do? Why do we want it? I have no idea. We do call it as part of initialization, though.

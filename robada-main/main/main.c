@@ -57,16 +57,6 @@ void main_task(void* args)
 {
     bool currentMotor = false; // false for M1, true for M2.
 
-    // register the motors with us.
-    if(!PWM_claim_motor(BASE_MOTOR, false))
-    {
-        ESP_LOGE(LOG_TAG, "Couldn't claim base motor.\n");
-    }
-    if(!PWM_claim_motor(SHOULDER_MOTOR, false))
-    {
-        ESP_LOGE(LOG_TAG, "Couldn't claim shoulder motor.\n");
-    }
-
     gpio_reset_pin(MOTOR_SELECT_LED_PIN);
     gpio_set_direction(MOTOR_SELECT_LED_PIN, GPIO_MODE_OUTPUT);
     gpio_set_level(MOTOR_SELECT_LED_PIN, currentMotor);
@@ -113,9 +103,12 @@ void main_task(void* args)
 
 void changeSpeed(pwm_motor_handle_t motor, bool clockwise)
 {
+    PWM_claim_motor(motor, true);
+    
     float prev = PWM_get_motor_speed(motor);
     float addTo = .2f*((int)clockwise*2-1);
     float toSet = prev+addTo;
     PWM_set_motor_speed(motor, toSet); // the set speed function caps our speed to the max/min so we should be good.
 
+    PWM_release_motor(motor, false);
 }
