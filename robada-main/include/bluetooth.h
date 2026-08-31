@@ -10,11 +10,12 @@
 void bluetooth_initialize();
 
 // Creates a UUID on the heap. Caller is responsible for freeing the memory.
-ble_uuid_t* bluetooth_create_uuid(uint8_t file, uint8_t obj);
+ble_uuid128_t* bluetooth_create_uuid(uint8_t file, uint8_t obj);
 
 // Add a ble service.
 void bluetooth_add_services(struct ble_gatt_svc_def* service_definitions);
 
+void bluetooth_start();
 
 
 

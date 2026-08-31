@@ -8,7 +8,7 @@
 
 // header for implementing Bluetooth control of the motor PWM.
 
-void initialize_bluetooth_pwm();
+void bluetooth_pwm_initialize();
 
 
 int blepwm_on_access(uint16_t conn_handle, uint16_t attr_handle,

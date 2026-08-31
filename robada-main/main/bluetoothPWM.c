@@ -1,12 +1,18 @@
 #include "bluetoothPWM.h"
 
 static const char* LOG_TAG = "ble_pwm";
+static const ble_uuid16_t auto_io_svc_uuid = BLE_UUID16_INIT(0x1815);
 static const uint8_t uuidBase = 0x01;
 
 
+pwm_motor_handle_t baseMotor; // yes this feels dumb.
+pwm_motor_handle_t shoulderMotor;
+
+ble_uuid128_t base_char_uuid;
+ble_uuid128_t shoulder_char_uuid; 
 
 
-static const struct ble_gatt_svc_def gatt_svr_svcs[] = 
+static struct ble_gatt_svc_def gatt_svr_svcs[] = 
 {
     /* Automation IO service */
     {
@@ -16,15 +22,15 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] =
             (struct ble_gatt_chr_def[])
             {
                 { // Base motor characteristic
-                    .uuid = bluetooth_create_uuid(uuidBase, 0),
+                    .uuid = (ble_uuid_t*)&base_char_uuid,
                     .access_cb = blepwm_on_access,
-                    .arg = &BASE_MOTOR,
+                    .arg = &baseMotor, // don't modify these
                     .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_READ,
                 },
                  { // Shoulder motor characteristic
-                    .uuid = bluetooth_create_uuid(uuidBase, 1),
+                    .uuid = (ble_uuid_t*)&shoulder_char_uuid,
                     .access_cb = blepwm_on_access,
-                    .arg = &SHOULDER_MOTOR,
+                    .arg = &shoulderMotor,
                     .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_READ,
                 },
                 {0}
@@ -38,8 +44,21 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] =
 
 
 
-void initialize_bluetooth_pwm()
+void bluetooth_pwm_initialize()
 {
+    // this feels very dumb.
+    ble_uuid128_t* uuid = bluetooth_create_uuid(uuidBase, 0);
+    base_char_uuid = *uuid;
+    free(uuid);
+
+    uuid = bluetooth_create_uuid(uuidBase, 1);
+    shoulder_char_uuid = *uuid;
+    free(uuid);
+
+
+    baseMotor = BASE_MOTOR;
+    shoulderMotor = SHOULDER_MOTOR;
+
     bluetooth_add_services(gatt_svr_svcs);
 }
 
@@ -47,7 +66,8 @@ void initialize_bluetooth_pwm()
 int blepwm_on_access(uint16_t conn_handle, uint16_t attr_handle,
                     struct ble_gatt_access_ctxt *context, void *arg)
 {
-    pwm_motor_handle_t motor = (pwm_motor_handle_t)*arg;
+    pwm_motor_handle_t motor = *(pwm_motor_handle_t*)arg;
+    float speed;
 
     switch (context->op) 
     {
@@ -55,15 +75,17 @@ int blepwm_on_access(uint16_t conn_handle, uint16_t attr_handle,
     case BLE_GATT_ACCESS_OP_WRITE_CHR:
         /* Verify access buffer length */
         if (context->om->om_len != sizeof(float)) {
-            ESP_LOGE(TAG, "Wrong length for test characteristic callback. opcode: %d, got: %d, expected: 1", context->op, context->om->om_len);
+            ESP_LOGE(LOG_TAG, "Wrong length for test characteristic callback. opcode: %d, got: %d, expected: 1", context->op, context->om->om_len);
             return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
         
         }
     
         // actually write the data.
-        float speed = context->om->om_data[0];
+        speed = *(float*)(context->om->om_data);
 
-        ESP_LOGI(TAG, "Motor %d speed write: %f.");
+        // char str[9];
+        // spri5ntf(str, "%08lX", *(uint32_t*)temp);
+        ESP_LOGI(LOG_TAG, "Motor %d speed write: %f.");
 
         PWM_claim_motor(motor, true);
         PWM_set_motor_speed(motor, speed);
@@ -73,9 +95,14 @@ int blepwm_on_access(uint16_t conn_handle, uint16_t attr_handle,
     
     case BLE_GATT_ACCESS_OP_READ_CHR:
     
-        float speed = PWM_get_motor_speed(motor);
+        speed = PWM_get_motor_speed(motor);
+        void* temp = &speed;
 
-        ESP_LOGI(TAG, "Motor %d Speed Read: %f.", motor, speed);
+        char str[9];
+        sprintf(str, "%08lX", *(uint32_t*)temp);
+        ESP_LOGI(LOG_TAG, "Motor %d Speed Read: %f. (%s)", motor, speed, str);
+    
+        
 
         int error = os_mbuf_append(context->om, &speed,
                                 sizeof speed);
@@ -85,7 +112,7 @@ int blepwm_on_access(uint16_t conn_handle, uint16_t attr_handle,
 
     /* Unknown event */
     default:
-        ESP_LOGE(TAG, "unexpected access operation to test characteristic, opcode: %d", context->op);
+        ESP_LOGE(LOG_TAG, "unexpected access operation to test characteristic, opcode: %d", context->op);
     }
 
     return BLE_ATT_ERR_UNLIKELY;

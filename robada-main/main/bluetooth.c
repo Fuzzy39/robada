@@ -6,8 +6,8 @@ const uint16_t BLE_GAP_APPEARANCE_GENERIC_INDUSTRIAL_TOOL = 0x14C0;
 
 #define UUID_SIZE 16
 
-const uint8_t base_uuid[UUID_SIZE] = {0x00, 0x00, 0xbc, 0xea, 0x5f, 0x78, 0x23, 0x15, 0xde, 0xef,
-                     0x12, 0x12, 0x25, 0x15, 0x00, 0x00};
+const uint8_t base_uuid[UUID_SIZE] = {0x00, 0x00, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+                     0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb};
 
 static uint8_t addressType; // will either be  BLE_ADDR_PUBLIC or BLE_ADDR_RANDOM. I think.
 
@@ -39,11 +39,15 @@ void bluetooth_add_services(struct ble_gatt_svc_def* service_definitions)
     }
 }
 
-ble_uuid_t* bluetooth_create_uuid(uint8_t file, uint8_t obj)
+// this feels like not the way that was intended. I guess making a macro would probably be better, that way it happens at compile time and not on the heap but...
+ble_uuid128_t* bluetooth_create_uuid(uint8_t file, uint8_t obj)
 {
-    uint8_t* uuid = malloc(sizeof(uint8_t)*UUID_SIZE);
-    memcpy(uuid, base_uuid, UUID_SIZE);
-    return BLE_UUID16_DECLARE(*uuid);
+    ble_uuid128_t* uuid = malloc(sizeof(ble_uuid128_t));
+    uuid->u.type=BLE_UUID_TYPE_128;
+    memcpy(&(uuid->value), base_uuid, UUID_SIZE);
+    uuid->value[0] = file;
+    uuid->value[1] = obj;   
+    return uuid; // this feels weird but sure man.
 }
 
 
@@ -61,6 +65,12 @@ void bluetooth_initialize()
 
     ble_svc_gatt_init();
 
+
+
+}
+
+void bluetooth_start()
+{
     // Apparently the host and controller have to be synced, and might not always be. So we have functions we can call if that's the case.
     /* Set host callbacks */
     ble_hs_cfg.reset_cb = on_stack_reset; // the bluetooth stack is reset if a significant error occurs.
@@ -78,7 +88,6 @@ void bluetooth_initialize()
 
     /* Start NimBLE host task thread and return */
     xTaskCreate(nimble_host_task, "NimBLE Host", 4*1024, NULL, 5, NULL);
-
 }
 
 
