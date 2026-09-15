@@ -1,4 +1,4 @@
 **/build/**
 .vscode/*
-**/target/natives/**
+**/target/**
 *.class
