@@ -38,7 +38,7 @@ int main()
     adapter.scan_for(5000);
     std::cout<<devicesFound<<"\n";
 
-    std::string device ="65\" Business TV BED-H";
+    std::string device ="Robada";
     bool hasConnected = false;
     SimpleBLE::Peripheral peripheral;
     for (std::size_t i = 0; i < peripherals.size(); i++) 
@@ -80,4 +80,7 @@ int main()
     for (std::size_t i = 0; i < readable_characteristics.size(); i++) {
         std::cout << "[" << i << "] " << readable_characteristics[i].first << " " << readable_characteristics[i].second << std::endl;
     }
+
+    peripheral.disconnect();
+    std::cout<<"Disconnected!\n";
 }
