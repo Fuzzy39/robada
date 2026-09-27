@@ -1,6 +1,24 @@
 #include <iostream>
 #include <simpleble/SimpleBLE.h>
+#include <bit>
+#include <chrono>
+#include <thread>
 
+
+
+const SimpleBLE::BluetoothUUID serviceUUID("00001815-0000-1000-8000-00805f9b34fb");
+const SimpleBLE::BluetoothUUID motor1("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbb0001");
+const SimpleBLE::BluetoothUUID motor2("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbb0101");
+
+kvn::bytearray floatAsBytes(float f)
+{
+    static_assert(sizeof(uint32_t) == sizeof(float), "Can't memcpy a float to an int");
+    uint32_t copyTo;
+    std::memcpy(&copyTo, &f, sizeof(float));
+    //copyTo = std::byteswap(copyTo);
+
+    return kvn::bytearray((char *)&copyTo, sizeof(uint32_t));
+}
 
 int main() 
 {
@@ -21,6 +39,7 @@ int main()
     auto adapter = adapters[0];
     std::cout << "Using adapter: " << adapter.identifier() << " [" << adapter.address() << "]" << std::endl;
 
+    // Scan for peripherals
     std::vector<SimpleBLE::Peripheral> peripherals;
 
     adapter.set_callback_on_scan_start([]() { std::cout << "Scan started." << std::endl; });
@@ -46,7 +65,7 @@ int main()
         SimpleBLE::Peripheral p = peripherals[i];
         if(p.identifier() == device)
         {
-            std::cout<<"Found DEvice\n";
+            std::cout<<"Found Device\n";
             peripheral = peripherals[i];
             hasConnected = true;
             break;
@@ -55,31 +74,45 @@ int main()
 
     if(!hasConnected)
     {
-        std::cout<<"WFHWOHWOE\n";
+        std::cout<<"Didn't Find device '"<<device<<"'.\n";
         return -1;
     }
 
     peripheral.connect();
 
-    std::vector<std::pair<SimpleBLE::BluetoothUUID, SimpleBLE::BluetoothUUID>> readable_characteristics;
-    for (auto& service : peripheral.services()) {
-        for (SimpleBLE::Characteristic& characteristic : (service.characteristics())) {
-            if (characteristic.can_read()) {
-                readable_characteristics.emplace_back(service.uuid(), characteristic.uuid());
-            }
+    SimpleBLE::Characteristic* Motor1Speed = nullptr;
+    SimpleBLE::Characteristic* Motor2Speed = nullptr;
+
+    for (auto& service : peripheral.services())
+    {
+        if(service.uuid()!=serviceUUID) continue;
+
+        for (SimpleBLE::Characteristic& characteristic : (service.characteristics())) 
+        {
+            if(characteristic.uuid()==motor1) Motor1Speed = &characteristic;
+            if(characteristic.uuid()==motor2) Motor2Speed = &characteristic;
         }
     }
 
-    if (readable_characteristics.empty()) {
-        std::cerr << "The peripheral has no readable characteristics." << std::endl;
-        peripheral.disconnect();
-        return EXIT_FAILURE;
+    if(!Motor1Speed || !Motor2Speed)
+    {
+        std::cout<<"Couldn't find motor characteristics!\n";
+        return -2;
     }
 
-    std::cout << "Readable characteristics:" << std::endl;
-    for (std::size_t i = 0; i < readable_characteristics.size(); i++) {
-        std::cout << "[" << i << "] " << readable_characteristics[i].first << " " << readable_characteristics[i].second << std::endl;
-    }
+
+    // test some stuff
+    peripheral.write_request(serviceUUID, motor1, floatAsBytes(.5f));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+    peripheral.write_request(serviceUUID, motor1, floatAsBytes(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    peripheral.write_request(serviceUUID, motor2, floatAsBytes(-.2f));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+    peripheral.write_request(serviceUUID, motor2, floatAsBytes(0));
+
 
     peripheral.disconnect();
     std::cout<<"Disconnected!\n";
