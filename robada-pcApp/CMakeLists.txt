@@ -12,13 +12,28 @@ if(wxWidgets_USE_FILE) # not defined in CONFIG mode
     include(${wxWidgets_USE_FILE})
 endif()
 
+# shared includes/library
+include_directories(PUBLIC "include/shared")
+
+add_library(robadaLib STATIC "src/shared/cli/Command.cpp")
+
 
 # Really simple simpleble test. Probably temporary.
 add_executable(bleTest "bleTest/main.cpp")
 target_link_libraries(bleTest simpleble::simpleble)
 
 
-add_executable(pcApp "src/test.cpp")
-target_include_directories(pcApp PUBLIC "include")
+# GUI pcApp
+add_executable(pcApp "src/gui/main.cpp")
+target_include_directories(pcApp PUBLIC "include/gui")
+target_link_libraries(pcApp robadaLib)
 target_link_libraries(pcApp simpleble::simpleble)
 target_link_libraries(pcApp ${wxWidgets_LIBRARIES})
+
+
+# Console pcApp
+add_executable(pcAppConsole "src/console/main.cpp")
+target_include_directories(pcAppConsole PUBLIC "include/console")
+target_link_libraries(pcAppConsole robadaLib)
+target_link_libraries(pcAppConsole simpleble::simpleble)
+target_link_libraries(pcAppConsole ${wxWidgets_LIBRARIES})
