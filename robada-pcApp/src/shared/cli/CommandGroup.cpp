@@ -1,5 +1,6 @@
 #include <cli/CommandGroup.h>
 
+const std::string cli::ROOT_NAME = "Robada CLI";
 
 void cli::CommandGroup::addCommand(Command* command)
 {
@@ -8,6 +9,8 @@ void cli::CommandGroup::addCommand(Command* command)
 
 bool cli::CommandGroup::run(std::vector<std::string>args, std::ostream& out)
 {
+
+
     // First, try to find a subcommand that fits the bill.
     cli::Command* subCommand = findSubCommand(args);
     if(subCommand != nullptr)
@@ -16,16 +19,26 @@ bool cli::CommandGroup::run(std::vector<std::string>args, std::ostream& out)
        return subCommand->run(std::vector<std::string>(args.begin()+1, args.end()), out);
     }
 
+
     // Failing that, we run ourselves.
     bool toReturn = checkArgs(args.size(), out);
+
+
     if(toReturn) toReturn = onRun(args, out);
     if (toReturn) return true;
 
+
     // print a help message.
-    out << description << "\nCommand Options:\n";
+    if(args.size()>0) out <<"Unrecognized command '"<<args[0]<<"'.\n";
+    out <<"Help for "<<name<<": "<< description << "\nCommands:\n";
     for(std::unique_ptr<Command>& command : subCommands )
     {
-        out << name <<" "<< command->getName()<<"\n";
+        if(name == ROOT_NAME)
+        {
+            out << command->getName()<<" - "<<command->getDescription()<<"\n";
+            continue;
+        }
+        out << name <<" "<< command->getName()<<" - "<<command->getDescription()<<"\n";
     }
 
     return false;

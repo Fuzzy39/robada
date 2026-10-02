@@ -7,14 +7,14 @@
 
 cli::Parser::Parser(std::istream& input, std::ostream& output)
     : input(input), output(output), 
-      root("", "Robada CLI. \"exit\" or \"quit\" to exit.", -1, -1, COMMAND{return false;})
+      root(ROOT_NAME, "\"exit\" or \"quit\" to exit.", -1, -1, COMMAND{return false;})
 {
     implementCommands();
 }
 
 std::string& trim(std::string& s)
 {
-    return s.erase(s.find_last_not_of(" \n\r\t") + 1).erase(0, s.find_first_not_of(" \n\r\t")-1);
+    return s.erase(s.find_last_not_of(" \n\r\t") + 1).erase(0, s.find_first_not_of(" \n\r\t"));
 }
 
 bool cli::Parser::parseCommand()
@@ -36,10 +36,10 @@ bool cli::Parser::parseCommand()
         buffer[i] = std::tolower(buffer[i]);
     }
 
-    output<< "Raw: '"<<buffer<<"'.\n";
+
     std::string line(buffer);
     line = trim(line);
-    output<< "Trimmed: '"<<line<<"'.\n";
+
     if(line.empty())
     {
         // carry on with life if it's empty.
@@ -57,7 +57,16 @@ bool cli::Parser::parseCommand()
     while(!line.empty())
     {
         size_t pos = line.find_first_of(" \n\r\t");
-        args.push_back(std::string(line.begin(), line.begin()+pos-1));
+        if(pos == std::string::npos)
+        {
+           
+            args.push_back(line);
+            line = "";
+            continue;
+        }
+
+        std::string token = std::string(line.begin(), line.begin()+pos);
+        args.push_back(token);
         line = trim(line.erase(0, pos));
     }
 
@@ -69,5 +78,29 @@ bool cli::Parser::parseCommand()
 
 void cli::Parser::implementCommands()
 {
+    root.addCommand(new Command("about", "basic information about Robada pcApp.", 0, 0, 
+        COMMAND
+        { 
+            out<<"Robada pcApp.\nControls the 3-axis robot Robada via bluetooth.\nThis software was made by Mason Hill.\nRobada was made by Matthew Lewis and Mason Hill.\n";  
+            return true;
+        }));
+    CommandGroup* TestGroup = new CommandGroup("test", "Demonstrate cli functionality. Has subcommands, but can take one argument.", 1, 1, 
+        COMMAND
+        {
+            out<<"Test '"<<args[0]<<"'? I hardly know 'er!\n";
+            return true;
+        });
+    TestGroup->addCommand(new Command("fart", "Says Fart. what did you expect?",0,0, 
+        COMMAND{
+            out<<"fart!\n";
+            return true;
+        }));
+    TestGroup->addCommand(new Command("echo", "Echos it's argument back, if provided.",0,1,
+        COMMAND{
+            if(args.size()==0){ out<<"The cave is utterly silent.\n"; return true;}
+            out<<"You hear '"<<args[0]<<"' reverberating through the cavern.\n";
+            return true;
+        }));
+    root.addCommand(TestGroup);
 
 }

@@ -6,6 +6,8 @@
 
 namespace cli
 {
+    extern const std::string ROOT_NAME;
+
     class CommandGroup : public Command
     {
     private:
