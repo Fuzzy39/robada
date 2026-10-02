@@ -35,10 +35,10 @@ bool cli::CommandGroup::run(std::vector<std::string>args, std::ostream& out)
     {
         if(name == ROOT_NAME)
         {
-            out << command->getName()<<" - "<<command->getDescription()<<"\n";
+            out << "  "<<command->getName()<<" - "<<command->getDescription()<<"\n";
             continue;
         }
-        out << name <<" "<< command->getName()<<" - "<<command->getDescription()<<"\n";
+        out <<"  "<< name <<" "<< command->getName()<<" - "<<command->getDescription()<<"\n";
     }
 
     return false;

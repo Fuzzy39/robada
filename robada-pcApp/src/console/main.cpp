@@ -8,7 +8,7 @@ int main(void)
     cli::Parser parser(std::cin, std::cout);
     while(parser.parseCommand())
     {
-        std::cout<<"> ";
+        std::cout<<"\n> ";
     }
     return 0;
 }
