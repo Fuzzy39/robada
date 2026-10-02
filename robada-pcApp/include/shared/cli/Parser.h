@@ -22,7 +22,7 @@ namespace cli
     public:
         Parser(std::istream& input, std::ostream& output);
     
-        bool parseCommand(); // returns whether to exit the program.
+        bool parseCommand(); // returns whether the program should continue running.
         
     private:
         void implementCommands();

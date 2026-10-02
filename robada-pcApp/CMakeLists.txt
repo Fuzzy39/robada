@@ -15,7 +15,7 @@ endif()
 # shared includes/library
 include_directories(PUBLIC "include/shared")
 
-add_library(robadaLib STATIC "src/shared/cli/Command.cpp")
+add_library(robadaLib STATIC "src/shared/cli/Command.cpp" "src/shared/cli/CommandGroup.cpp" "src/shared/cli/Parser.cpp")
 
 
 # Really simple simpleble test. Probably temporary.
