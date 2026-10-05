@@ -22,7 +22,9 @@ namespace cli
         void addCommand(Command* command);
 
         bool run(std::vector<std::string>args, std::ostream& out);
-    private:
-        Command* findSubCommand(std::vector<std::string>args);
+        void printHelp(std::ostream& out);
+
+ 
+        Command* findSubCommand(std::string name);
     };
 }

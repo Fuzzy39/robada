@@ -1,14 +1,9 @@
 #include <iostream>
-#include <cli/Parser.h>
+#include <cli/Engine.h>
 
 int main(void)
 {
-    std::cout<<"Welcome to Robada CLI!\n";
-    std::cout<<"> ";
-    cli::Parser parser(std::cin, std::cout);
-    while(parser.parseCommand())
-    {
-        std::cout<<"\n> ";
-    }
+    cli::Engine parser(std::cin, std::cout);
+    while(parser.interpret());
     return 0;
 }

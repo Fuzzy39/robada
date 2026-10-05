@@ -2,8 +2,8 @@
 #include <stdexcept>
 #include <ostream>
 
-cli::Command::Command(std::string name, std::string description, int minArgs, int maxArgs, CommandFunc onRun): 
-    name(name), description(description), 
+cli::Command::Command(std::string name, std::string description, int minArgs, int maxArgs, CommandFunc onRun):
+    name(name), description(description),
     minArgs(minArgs), maxArgs(maxArgs), onRun(onRun)
 {
     if(onRun==nullptr)
@@ -11,7 +11,7 @@ cli::Command::Command(std::string name, std::string description, int minArgs, in
         throw std::invalid_argument("A command's onRun function may not be null.");
     }
 
-    if(minArgs>maxArgs)
+    if(minArgs>=0 && maxArgs>=0 && minArgs>maxArgs)
     {
         throw std::invalid_argument("minArgs must be less than or equal to maxArgs.");
     }
@@ -23,12 +23,14 @@ bool cli::Command::run(std::vector<std::string>args, std::ostream& out)
     bool toReturn = checkArgs(args.size(), out);
 
     if(toReturn) toReturn = onRun(args, out);
-    if(!toReturn)
-    {
-        // print help text if the command fails.
-        out <<"Help for "<<name<<": "<< description <<"\n";
-    }
+    // print help text if the command fails.
+    if (!toReturn) printHelp(out);
     return toReturn;
+}
+
+void cli::Command::printHelp(std::ostream& out)
+{
+    out << "Help for " << name << ": " << description << "\n";
 }
 
 bool cli::Command::checkArgs(size_t argsCount, std::ostream& out) const
@@ -57,4 +59,12 @@ const std::string& cli::Command::getName() const
 const std::string& cli::Command::getDescription() const
 {
     return description;
+}
+
+const std::string cli::Command::getBriefDescription() const
+{
+    size_t index = description.find_first_of("\n");
+    if (index == std::string::npos) return getDescription();
+
+    return std::string(description).erase(index);
 }

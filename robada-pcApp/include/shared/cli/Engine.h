@@ -2,9 +2,11 @@
 #include <iostream>
 #include "CommandGroup.h"
 
+#define COMMAND [](std::vector<std::string> args, std::ostream& out)->bool
+
 namespace cli
 {
-    class Parser
+    class Engine
     {
         // input stream, output stream, second output stream for robada comms.
         // CommandGroup 'root'
@@ -20,11 +22,12 @@ namespace cli
 
 
     public:
-        Parser(std::istream& input, std::ostream& output);
-    
-        bool parseCommand(); // returns whether the program should continue running.
-        
+        Engine(std::istream& input, std::ostream& output);
+        bool interpret();
+
     private:
+        bool parseCommand(); // returns whether the program should continue running.
         void implementCommands();
+        void implementHelp();
     };
 }
