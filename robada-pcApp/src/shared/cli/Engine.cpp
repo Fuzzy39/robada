@@ -21,9 +21,13 @@ std::string& trim(std::string& s)
 
 bool cli::Engine::interpret()
 {
-    bool toReturn = parseCommand();
-    std::cout << "\n> ";
-    return toReturn;
+    if (parseCommand())
+    {
+        std::cout << "\n> ";
+        return true;
+    }
+    
+    return false;
 }
 
 bool cli::Engine::parseCommand()
