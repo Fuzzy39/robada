@@ -1,0 +1,4 @@
+[submodule "robada-pcApp/wxWidgets"]
+	path = robada-pcApp/wxWidgets
+	url = https://github.com/wxWidgets/wxWidgets.git
+	branch = 3.2
