@@ -1,4 +1,5 @@
 #include "test.h"
+#include <wx/notebook.h>
 
 enum
 {
@@ -31,14 +32,25 @@ MyFrame::MyFrame()
     SetMenuBar(menuBar);
 
     // let's try for some actual UI elements
+    
+    
     wxBoxSizer *topsizer = new wxBoxSizer( wxVERTICAL );
+    // parent has to be this?
+    wxNotebook* notebook = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNB_TOP);
 
-    wxPanel* panel = new wxPanel(this);
+    wxPanel* panel = new wxPanel(notebook);
+    notebook->AddPage(panel, "Test");
     label = new wxStaticText(panel, wxID_ANY, "Hello, world!");
     topsizer->Add(label, 0, wxALL, 10);
     auto button = new wxButton(panel, wxID_ANY, "Click me!");
     topsizer->Add(button, 0, wxALL, 10);
     panel->SetSizer(topsizer);
+
+    wxPanel* panel2 = new wxPanel(notebook);
+    notebook->AddPage(panel2, "Other");
+    new wxStaticText(panel2, wxID_ANY, "other page");
+
+    notebook->SetSelection(0);
 
     // bind events
     Bind(wxEVT_MENU, &MyFrame::OnHello, this, ID_Hello);
