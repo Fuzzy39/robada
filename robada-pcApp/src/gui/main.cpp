@@ -13,7 +13,7 @@ bool MyApp::OnInit()
 }
 
 MyFrame::MyFrame()
-        : wxFrame(nullptr, wxID_ANY, "Hello World")
+        : wxFrame(nullptr, wxID_ANY, "Robada pcApp")
 {
     wxMenu *menuFile = new wxMenu;
     menuFile->Append(ID_Hello, "&Hello...\tCtrl+H",
@@ -30,10 +30,21 @@ MyFrame::MyFrame()
  
     SetMenuBar(menuBar);
 
+    // let's try for some actual UI elements
+    wxBoxSizer *topsizer = new wxBoxSizer( wxVERTICAL );
+
+    wxPanel* panel = new wxPanel(this);
+    label = new wxStaticText(panel, wxID_ANY, "Hello, world!");
+    topsizer->Add(label, 0, wxALL, 10);
+    auto button = new wxButton(panel, wxID_ANY, "Click me!");
+    topsizer->Add(button, 0, wxALL, 10);
+    panel->SetSizer(topsizer);
+
     // bind events
     Bind(wxEVT_MENU, &MyFrame::OnHello, this, ID_Hello);
     Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
+    button->Bind(wxEVT_BUTTON, &MyFrame::OnClick, this);
 }
 
 void MyFrame::OnExit(wxCommandEvent& event)
@@ -50,4 +61,9 @@ void MyFrame::OnAbout(wxCommandEvent& event)
 void MyFrame::OnHello(wxCommandEvent& event)
 {
     wxLogMessage("Hello world from wxWidgets!");
-}
+}  
+
+void MyFrame::OnClick(wxCommandEvent& event)
+{
+    label->SetLabel("Wow You clicked me how dare you, pervert.");
+}  

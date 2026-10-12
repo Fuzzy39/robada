@@ -19,9 +19,11 @@ public:
     MyFrame();
  
 private:
+    wxStaticText* label;
     void OnHello(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
+    void OnClick(wxCommandEvent& event);
 };
 
 // This defines the equivalent of main() for the current platform.
