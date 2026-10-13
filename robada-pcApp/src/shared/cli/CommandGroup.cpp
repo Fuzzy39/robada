@@ -59,9 +59,9 @@ void cli::CommandGroup::printHelp(std::ostream& out)
     {
         if (name == ROOT_NAME)
         {
-            out << "  " << command->getName() << " - " << command->getBriefDescription() << "\n";
+            out << "\t" << command->getName() << " - " << command->getBriefDescription() << "\n";
             continue;
         }
-        out << "  " << name << " " << command->getName() << " - " << command->getBriefDescription() << "\n";
+        out << "\t" << name << " " << command->getName() << " - " << command->getBriefDescription() << "\n";
     }
 }

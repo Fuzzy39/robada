@@ -23,7 +23,7 @@ add_executable(bleTest "bleTest/main.cpp")
 target_link_libraries(bleTest simpleble::simpleble)
 
 # GUI pcApp
-add_executable(pcApp WIN32 "src/gui/main.cpp")
+add_executable(pcApp WIN32 "src/gui/main.cpp" "src/gui/TestPanel.cpp" "src/gui/ConsolePanel.cpp")
 target_include_directories(pcApp PUBLIC "include/gui")
 target_link_libraries(pcApp robadaLib)
 target_link_libraries(pcApp simpleble::simpleble)

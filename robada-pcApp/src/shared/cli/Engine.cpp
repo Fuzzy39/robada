@@ -23,7 +23,7 @@ bool cli::Engine::interpret()
 {
     if (parseCommand())
     {
-        std::cout << "\n> ";
+        output << "\n> ";
         return true;
     }
     

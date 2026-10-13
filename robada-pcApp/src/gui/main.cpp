@@ -1,4 +1,7 @@
-#include "test.h"
+#include "app.h"
+#include "frame.h"
+#include "TestPanel.h"
+#include "ConsolePanel.h"
 #include <wx/notebook.h>
 
 enum
@@ -14,12 +17,9 @@ bool MyApp::OnInit()
 }
 
 MyFrame::MyFrame()
-        : wxFrame(nullptr, wxID_ANY, "Robada pcApp")
+        : wxFrame(nullptr, wxID_ANY, "Robada pcApp", wxDefaultPosition, wxSize(800, 600))
 {
     wxMenu *menuFile = new wxMenu;
-    menuFile->Append(ID_Hello, "&Hello...\tCtrl+H",
-                     "Help string shown in status bar for this menu item");
-    menuFile->AppendSeparator();
     menuFile->Append(wxID_EXIT);
  
     wxMenu *menuHelp = new wxMenu;
@@ -32,31 +32,18 @@ MyFrame::MyFrame()
     SetMenuBar(menuBar);
 
     // let's try for some actual UI elements
-    
-    
-    wxBoxSizer *topsizer = new wxBoxSizer( wxVERTICAL );
     // parent has to be this?
     wxNotebook* notebook = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNB_TOP);
 
-    wxPanel* panel = new wxPanel(notebook);
-    notebook->AddPage(panel, "Test");
-    label = new wxStaticText(panel, wxID_ANY, "Hello, world!");
-    topsizer->Add(label, 0, wxALL, 10);
-    auto button = new wxButton(panel, wxID_ANY, "Click me!");
-    topsizer->Add(button, 0, wxALL, 10);
-    panel->SetSizer(topsizer);
-
-    wxPanel* panel2 = new wxPanel(notebook);
-    notebook->AddPage(panel2, "Other");
-    new wxStaticText(panel2, wxID_ANY, "other page");
-
+    // setup our current pages.
+    notebook->AddPage(new ConsolePanel(notebook, this), "Console");
+    notebook->AddPage( new TestPanel(notebook), "Test");
     notebook->SetSelection(0);
 
     // bind events
-    Bind(wxEVT_MENU, &MyFrame::OnHello, this, ID_Hello);
     Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
-    button->Bind(wxEVT_BUTTON, &MyFrame::OnClick, this);
+   
 }
 
 void MyFrame::OnExit(wxCommandEvent& event)
@@ -69,13 +56,3 @@ void MyFrame::OnAbout(wxCommandEvent& event)
     wxMessageBox("This is a wxWidgets Hello World example",
                  "About Hello World", wxOK | wxICON_INFORMATION);
 }
-
-void MyFrame::OnHello(wxCommandEvent& event)
-{
-    wxLogMessage("Hello world from wxWidgets!");
-}  
-
-void MyFrame::OnClick(wxCommandEvent& event)
-{
-    label->SetLabel("Wow You clicked me how dare you, pervert.");
-}  
