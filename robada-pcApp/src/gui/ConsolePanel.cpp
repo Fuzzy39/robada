@@ -13,6 +13,7 @@ ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(paren
     input = std::make_unique<std::istringstream>();
     output = std::make_unique<std::ostream>(textCtrl);
     cliEngine = std::make_unique<cli::Engine>(*input, *output);
+    cliEngine->initialize();
     
     userStartPosition = textCtrl->GetLastPosition();
     textCtrlContents = textCtrl->GetValue();

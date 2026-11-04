@@ -2,25 +2,56 @@
 #include <istream>
 #include <ostream>
 #include <cstring>
+#include <sstream>
+
+
 
 cli::Engine::Engine(std::istream& input, std::ostream& output)
     : input(input), output(output), 
       root(ROOT_NAME, "Software for controlling the 3-axis robot Robada.\n\"exit\" or \"quit\" to exit.", -1, -1, COMMAND{return false;})
 {
-    implementCommands();
-    implementHelp();
+    initialized = false;
+    // Arguably calling this in the constructor is bad, since this is including too much robada specific information in what ostensibly is a pretty agnostic
+    // command processor. If I want to re-use this code for something else in the future I'll have to move this or scrub it out.
+    // It's convienent, though, isn't it?
+    cli::registerSharedCommands(*this);
 
+}
+
+
+cli::Command* cli::Engine::addCommand(cli::CommandGroup* parent, cli::Command* command)
+{
+    if(initialized) throw std::logic_error("Engine::addCommand: Can't add commands after initialization.");
+
+    if(parent == nullptr) parent = &root; // root is the parent if this is a root level command. checks out.
+
+    // check that the parent is known to the engine.
+    if(!root.commandExists(parent)) // root is part of root, so this will return true in that case.
+    {
+        std::ostringstream error;
+        error<<"Engine::addCommand: parent '"<< parent->getName() <<"' is not a command known to this engine. ";
+        throw std::invalid_argument(error.str());
+    }
+    
+    // okay, add it
+    parent->addCommand(command);
+    return command;
+}
+
+void cli::Engine::initialize()
+{
+    if(initialized) throw std::logic_error("Engine::initalize: Already initialized.");
+    initialized=true;
+
+    implementHelp();
     output << "Welcome to Robada CLI! 'help' for help.\n";
     output << "> ";
 }
 
-std::string& trim(std::string& s)
-{
-    return s.erase(s.find_last_not_of(" \n\r\t") + 1).erase(0, s.find_first_not_of(" \n\r\t"));
-}
-
 bool cli::Engine::interpret()
 {
+    if(!initialized) throw std::logic_error("Engine::interpret: Engine not initialized. Call Engine::intialize first."); 
+
     if (parseCommand())
     {
         output << "\n> ";
@@ -28,6 +59,19 @@ bool cli::Engine::interpret()
     }
     
     return false;
+}
+
+
+
+
+
+// Private functions
+
+
+// helper for parseCommand
+std::string& trim(std::string& s)
+{
+    return s.erase(s.find_last_not_of(" \n\r\t") + 1).erase(0, s.find_first_not_of(" \n\r\t"));
 }
 
 bool cli::Engine::parseCommand()
@@ -87,6 +131,7 @@ bool cli::Engine::parseCommand()
     root.run(args, output);
     return true;
 }
+
 
 void cli::Engine::implementHelp()
 {

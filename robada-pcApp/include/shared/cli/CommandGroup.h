@@ -26,5 +26,6 @@ namespace cli
 
  
         Command* findSubCommand(std::string name);
+        bool commandExists(cli::Command* command); // check whether command exists as any child of this command (or child of child, etc.)
     };
 }

@@ -3,7 +3,16 @@
 
 int main(void)
 {
-    cli::Engine parser(std::cin, std::cout);
-    while(parser.interpret());
+    try
+    {
+        cli::Engine parser(std::cin, std::cout);
+        parser.initialize();
+        while(parser.interpret());
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr <<"pcApp crashed with the following exception: "<< e.what() << '\n';
+    }
+    
     return 0;
 }
