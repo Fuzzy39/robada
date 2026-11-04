@@ -12,8 +12,19 @@ ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(paren
     // setup CLI engine.
     input = std::make_unique<std::istringstream>();
     output = std::make_unique<std::ostream>(textCtrl);
-    cliEngine = std::make_unique<robadaCLI::Engine>(*input, *output);
-    cliEngine->initialize();
+    try
+    {   
+        cliEngine = std::make_unique<robadaCLI::Engine>(*input, *output);
+        cliEngine->initialize();    
+    }
+    catch(const std::exception& e)
+    {   
+        textCtrl->Clear();
+        textCtrl->AppendText("Robada CLI failed to initialize. Reason below.\n");
+        textCtrl->AppendText(e.what());
+        textCtrl->SetEditable(false);
+    }
+   
     
     userStartPosition = textCtrl->GetLastPosition();
     textCtrlContents = textCtrl->GetValue();
