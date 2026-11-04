@@ -6,17 +6,15 @@
 
 namespace cli
 {
-    extern const std::string ROOT_NAME;
-
     class CommandGroup : public Command
     {
     private:
         std::vector<std::unique_ptr<Command>> subCommands;
+        bool isRoot; // whether this is the root command of an engine
         
         // function to do command is overwritten.
     public:
-        using Command::Command;
-        // constructor, add/remove commands maybe. Implementation of command.
+        CommandGroup(std::string name, std::string description, int minArgs, int maxArgs, CommandFunc onRun, bool isRoot = false);
 
         // This class takes ownership of the command.
         void addCommand(Command* command);

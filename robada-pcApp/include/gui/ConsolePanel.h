@@ -7,7 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <memory>
-#include <cli/Engine.h>
+#include <robadaCLI/Engine.h>
 
 class ConsolePanel: public wxPanel
 {

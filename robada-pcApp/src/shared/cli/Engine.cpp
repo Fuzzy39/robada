@@ -6,16 +6,11 @@
 
 
 
-cli::Engine::Engine(std::istream& input, std::ostream& output)
+cli::Engine::Engine(std::istream& input, std::ostream& output, std::string cliName, std::string briefDescription)
     : input(input), output(output), 
-      root(ROOT_NAME, "Software for controlling the 3-axis robot Robada.\n\"exit\" or \"quit\" to exit.", -1, -1, COMMAND{return false;})
+      root(cliName, briefDescription, -1, -1, COMMAND{return false;}, true)
 {
     initialized = false;
-    // Arguably calling this in the constructor is bad, since this is including too much robada specific information in what ostensibly is a pretty agnostic
-    // command processor. If I want to re-use this code for something else in the future I'll have to move this or scrub it out.
-    // It's convienent, though, isn't it?
-    cli::registerSharedCommands(*this);
-
 }
 
 

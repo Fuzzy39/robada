@@ -24,7 +24,7 @@ namespace cli
                             // Main initialization task is setting up the help command.
 
     public:
-        Engine(std::istream& input, std::ostream& output);
+        Engine(std::istream& input, std::ostream& output, std::string cliName, std::string briefDescription);
 
       
         // add a command to the interpreter. parent can be null if it is a root level command.
@@ -43,6 +43,5 @@ namespace cli
         void implementHelp();
     };
 
-    // register commands that are shared between GUI and CLI.
-    cli::Engine& registerSharedCommands(cli::Engine& engine);
+ 
 }

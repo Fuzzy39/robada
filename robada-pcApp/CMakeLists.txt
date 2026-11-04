@@ -16,7 +16,7 @@ add_subdirectory(wxWidgets)
 
 # shared includes/library
 include_directories(PUBLIC "include/shared")
-add_library(robadaLib STATIC "src/shared/cli/Command.cpp" "src/shared/cli/CommandGroup.cpp" "src/shared/cli/Engine.cpp" "src/shared/cli/Commands.cpp")
+add_library(robadaLib STATIC "src/shared/robadaCLI/Engine.cpp" "src/shared/cli/CommandGroup.cpp" "src/shared/cli/Engine.cpp" "src/shared/cli/Command.cpp")
 
 # Really simple simpleble test. Probably temporary.
 add_executable(bleTest "bleTest/main.cpp")

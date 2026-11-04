@@ -1,7 +1,12 @@
 #include <cli/CommandGroup.h>
 #include <sstream>
 
-const std::string cli::ROOT_NAME = "Robada CLI";
+// Too many arguments in my constructor?
+// I mean, yeah.
+cli::CommandGroup::CommandGroup
+    (std::string name, std::string description, int minArgs, int maxArgs, CommandFunc onRun, bool isRoot)
+    : cli::Command(name, description, minArgs, maxArgs, onRun), isRoot(isRoot) {}
+
 
 void cli::CommandGroup::addCommand(Command* command)
 {
@@ -85,7 +90,7 @@ void cli::CommandGroup::printHelp(std::ostream& out)
     out << "Help for " << name << ": " << description << "\nCommands:\n";
     for (std::unique_ptr<Command>& command : subCommands)
     {
-        if (name == ROOT_NAME)
+        if (isRoot)
         {
             out << "\t" << command->getName() << " - " << command->getBriefDescription() << "\n";
             continue;

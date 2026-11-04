@@ -1,11 +1,11 @@
 #include <iostream>
-#include <cli/Engine.h>
+#include <robadaCLI/Engine.h>
 
 int main(void)
 {
     try
     {
-        cli::Engine parser(std::cin, std::cout);
+        robadaCLI::Engine parser(std::cin, std::cout);
         parser.initialize();
         while(parser.interpret());
     }
