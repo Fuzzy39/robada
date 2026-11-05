@@ -17,6 +17,7 @@ add_subdirectory(wxWidgets)
 # shared includes/library
 include_directories(PUBLIC "include/shared")
 add_library(robadaLib STATIC "src/shared/cli/Engine.cpp" "src/shared/cli/HasHelpInfo.cpp" 
+"src/shared/cli/argument/Argument.cpp" "src/shared/cli/argument/ArgumentType.cpp"  
 "src/shared/cli/command/CommandBase.cpp" "src/shared/cli/command/CommandGroup.cpp" "src/shared/cli/command/Command.cpp" 
 "src/shared/robadaCLI/Engine.cpp")
 

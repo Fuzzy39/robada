@@ -13,9 +13,6 @@ namespace cli
     // CommandBase is an abstract class that represents something that the CLI engine can execute.
     class CommandBase : public HasHelpInfo
     {
-    protected:
-        const std::string name;
-        const std::string description; // one or more line description for help documentation.
     
     public:
         CommandBase(std::string name, std::string description);
@@ -23,7 +20,5 @@ namespace cli
         virtual bool run(std::vector<std::string>args, std::ostream& out) = 0;
 
         virtual void printHelp(std::ostream& out) override;
-        virtual const std::string& getName() const override;
-        virtual const std::string& getDescription() const override;
     };
 }
