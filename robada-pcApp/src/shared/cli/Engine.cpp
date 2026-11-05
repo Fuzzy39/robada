@@ -8,13 +8,13 @@
 
 cli::Engine::Engine(std::istream& input, std::ostream& output, std::string cliName, std::string briefDescription)
     : input(input), output(output), 
-      root(cliName, briefDescription, -1, -1, COMMAND{return false;}, true)
+      root(cliName, briefDescription, true)
 {
     initialized = false;
 }
 
 
-cli::Command* cli::Engine::addCommand(cli::CommandGroup* parent, cli::Command* command)
+cli::CommandGroup* cli::Engine::addCommand(cli::CommandGroup* parent, cli::CommandBase* command)
 {
     if(initialized) throw std::logic_error("Engine::addCommand: Can't add commands after initialization.");
 
@@ -30,7 +30,7 @@ cli::Command* cli::Engine::addCommand(cli::CommandGroup* parent, cli::Command* c
     
     // okay, add it
     parent->addCommand(command);
-    return command;
+    return dynamic_cast<CommandGroup*>(command);
 }
 
 void cli::Engine::initialize()
@@ -141,7 +141,7 @@ void cli::Engine::implementHelp()
             {
                 std::string& commandName = args[i];
 
-                Command* next = current->findSubCommand(commandName);
+                CommandBase* next = current->findSubCommand(commandName);
                 if (next == nullptr)
                 {
                     out << "Couldn't find command '" << commandName << "'.\n";

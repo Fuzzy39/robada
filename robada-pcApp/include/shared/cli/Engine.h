@@ -1,8 +1,9 @@
 #pragma once
 #include <iostream>
-#include "CommandGroup.h"
+#include <cli/command/CommandGroup.h>
+#include <cli/command/Command.h>
 
-#define COMMAND [](std::vector<std::string> args, std::ostream& out)->bool
+
 
 namespace cli
 {
@@ -28,8 +29,8 @@ namespace cli
 
       
         // add a command to the interpreter. parent can be null if it is a root level command.
-        // returns command back for ease of use.
-        cli::Command* addCommand(cli::CommandGroup* parent, cli::Command* command);
+        // returns the command back if it was a group for easy use later. nullptr if not.
+        cli::CommandGroup* addCommand(cli::CommandGroup* parent, cli::CommandBase* command);
 
         // initialize should be called after commands are added, but before interperting any commands.
         void initialize();

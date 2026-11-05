@@ -15,9 +15,16 @@ ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(paren
     try
     {   
         cliEngine = std::make_unique<robadaCLI::Engine>(*input, *output);
+
+        cliEngine->addCommand(nullptr, new cli::Command("clear", "Clears the CLI window.", 0, 0,
+             [this](std::vector<std::string> args, std::ostream& out)->bool { 
+                textCtrl->Clear(); 
+                return true; 
+            }));
+
         cliEngine->initialize();    
     }
-    catch(const std::exception& e)
+    catch(const std::exception& e) 
     {   
         textCtrl->Clear();
         textCtrl->AppendText("Robada CLI failed to initialize. Reason below.\n");

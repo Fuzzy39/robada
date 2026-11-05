@@ -20,8 +20,8 @@ namespace robadaCLI
                 out << "Robada pcApp.\nControls the 3-axis robot Robada via bluetooth.\nThis software was made by Mason Hill.\nRobada was made by Matthew Lewis and Mason Hill.\n";
                 return true;
             }));
-        cli::CommandGroup* TestGroup = static_cast<cli::CommandGroup*>(addCommand( nullptr, 
-            new cli::CommandGroup("test", "Demonstrate cli functionality.\nSeriously, just a test. I was in fact testing you.", -1, -1,
+        cli::CommandGroup* TestGroup = static_cast<cli::CommandGroup*>(addCommand(nullptr, 
+            new cli::CommandGroup("test", "Demonstrate cli functionality.\nSeriously, just a test. I was in fact testing you.",
             COMMAND
             {
                 return false;
