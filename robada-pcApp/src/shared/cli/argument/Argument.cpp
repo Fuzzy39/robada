@@ -25,7 +25,7 @@ namespace cli
     // If parsing fails, an error message will be printed and nullptr is returned.
     // Otherwise, a pointer to a the argument is passed. the user function is responsible for 
     // deleting the result.
-    void* Argument::tryGetArgument(std::string& commandName, std::string& token, std::ostream out)
+    void* Argument::tryGetArgument(const std::string& commandName, std::string& token, std::ostream& out)
     {
         if(!type.CheckStringIsOfType(token))
         {

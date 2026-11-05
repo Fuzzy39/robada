@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cli/command/CommandGroup.h>
 #include <cli/command/Command.h>
-
+#include <cli/argument/ArgumentType.h>
 
 
 namespace cli
@@ -23,14 +23,20 @@ namespace cli
         CommandGroup root;
         bool initialized;   // once initalized, an engine is able to interpret commands, but new commands may not be added.
                             // Main initialization task is setting up the help command.
+    
+        TypeRegistry typeRegistry;
 
     public:
         Engine(std::istream& input, std::ostream& output, std::string cliName, std::string briefDescription);
 
-      
+        
+        cli::ArgumentType* addType(ArgTypeId id, std::string name, ArgIsOfTypeFunc& checkType, ConvertArgFunc& convertArg);
+
         // add a command to the interpreter. parent can be null if it is a root level command.
-        // returns the command back if it was a group for easy use later. nullptr if not.
-        cli::CommandGroup* addCommand(cli::CommandGroup* parent, cli::CommandBase* command);
+        // returns the command that was created.
+        cli::Command* addCommand(cli::CommandGroup* parent, std::string name, CommandFunc onRun);
+
+        cli::CommandGroup* addCommandGroup(cli::CommandGroup* parent, std::string name);
 
         // initialize should be called after commands are added, but before interperting any commands.
         void initialize();

@@ -3,11 +3,17 @@
 
 // Too many arguments in my constructor?
 // I mean, yeah.
-cli::CommandGroup::CommandGroup (std::string name, std::string description, bool isRoot)
-    : cli::CommandBase(name, description), isRoot(isRoot) {}
+cli::CommandGroup::CommandGroup (std::string name, bool isRoot)
+    : cli::CommandBase(name), isRoot(isRoot) {}
 
 
-void cli::CommandGroup::addCommand(CommandBase* command)
+cli::CommandGroup* cli::CommandGroup::setDescription(std::string description)
+{
+    this->description = description;
+    return this;
+}
+
+void cli::CommandGroup::addCommand(CommandBase *command)
 {
     // check that a command with this name doesn't already exist.
     for(std::unique_ptr<cli::CommandBase>& com : subCommands)

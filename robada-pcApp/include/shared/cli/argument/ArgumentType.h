@@ -1,13 +1,18 @@
 #pragma once
 #include <functional>
+#include <map>
+#include <memory>
 #include <cli/HasHelpInfo.h>
 
 namespace cli
 {
+    class ArgumentType;
+
     typedef int ArgTypeId;
     typedef std::function<bool(std::string&)> ArgIsOfTypeFunc;
     typedef std::function<void*(std::string&)> ConvertArgFunc;
-
+    typedef std::map<ArgTypeId, std::unique_ptr<ArgumentType>> TypeRegistry;
+ 
     class ArgumentType : public HasHelpInfo
     {
     private:
@@ -24,4 +29,7 @@ namespace cli
 
         virtual void printHelp(std::ostream& out) override;
     };
+
+   
+
 }

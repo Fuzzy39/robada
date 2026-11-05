@@ -17,7 +17,8 @@ namespace cli
         
         // function to do command is overwritten.
     public:
-        CommandGroup(std::string name, std::string description, bool isRoot = false);
+        CommandGroup(std::string name, bool isRoot = false);
+        CommandGroup* setDescription(std::string description);
 
         // This class takes ownership of the command.
         void addCommand(CommandBase* command);
