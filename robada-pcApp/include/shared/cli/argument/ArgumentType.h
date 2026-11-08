@@ -9,27 +9,21 @@ namespace cli
     class ArgumentType;
 
     typedef int ArgTypeId;
-    typedef std::function<bool(std::string&)> ArgIsOfTypeFunc;
-    typedef std::function<void*(std::string&)> ConvertArgFunc;
-    typedef std::function<void(void*)> DeleteValueFunc;
 
     typedef std::map<ArgTypeId, std::unique_ptr<ArgumentType>> TypeRegistry;
  
     class ArgumentType : public HasHelpInfo
     {
     private:
-        
-        ArgIsOfTypeFunc& checkType;
-        ConvertArgFunc& convertArg;
-        DeleteValueFunc& deleteValue;
-
     public:
-        ArgumentType(std::string name, ArgIsOfTypeFunc& checkType, ConvertArgFunc& convertArg, DeleteValueFunc& deleteValue);
+        ArgumentType(std::string name);
+        ArgumentType(std::string name, std::string description);
+
         ArgumentType* setDescription(std::string description);
 
-        bool CheckStringIsOfType(std::string token);
-        void* ConvertStringToType(std::string token);
-        void DeleteValue(void* argValue);
+        virtual bool CheckStringIsOfType(std::string token) = 0;
+        virtual void* ConvertStringToType(std::string token) = 0;
+        virtual void DeleteValue(void* argValue) = 0;
 
         virtual void printHelp(std::ostream& out) override;
     };

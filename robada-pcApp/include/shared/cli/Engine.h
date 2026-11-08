@@ -30,7 +30,7 @@ namespace cli
         Engine(std::istream& input, std::ostream& output, std::string cliName, std::string briefDescription);
 
         
-        cli::ArgumentType* addType(ArgTypeId id, std::string name, ArgIsOfTypeFunc checkType, ConvertArgFunc convertArg, DeleteValueFunc deleteValue);
+        cli::ArgumentType* addType(ArgTypeId id, ArgumentType* type);
 
         // add a command to the interpreter. parent can be null if it is a root level command.
         // returns the command that was created.

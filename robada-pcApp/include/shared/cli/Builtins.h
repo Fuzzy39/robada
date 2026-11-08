@@ -11,14 +11,41 @@ namespace cli::builtins
         LAST
     };
 
-    bool isToken(std::string&);
-    void* convertToken(std::string&);
+    class TokenType : public ArgumentType
+    {
+    public:
+        TokenType();
 
-    bool isInt(std::string&);
-    void* convertInt(std::string&);    
+        virtual bool CheckStringIsOfType(std::string token);
 
-    bool isDouble(std::string&);
-    void* convertDouble(std::string&); 
+        virtual void* ConvertStringToType(std::string token);
+
+        virtual void DeleteValue(void* value);
+    };
     
+    class IntType : public ArgumentType
+    {
+    public:
+        IntType();
+
+        virtual bool CheckStringIsOfType(std::string token);
+
+        virtual void* ConvertStringToType(std::string token);
+
+        virtual void DeleteValue(void* value);
+    };
+    
+    class DoubleType : public ArgumentType
+    {
+    public:
+        DoubleType();
+
+        virtual bool CheckStringIsOfType(std::string token);
+
+        virtual void* ConvertStringToType(std::string token);
+
+        virtual void DeleteValue(void* value);
+    };
+
     void registerTypes(cli::Engine& engine);
 }

@@ -1,33 +1,16 @@
 #include <cli/argument/ArgumentType.h>
+#include <iostream>
 
 namespace cli
 {
-    ArgumentType::ArgumentType(std::string name, ArgIsOfTypeFunc& checkType, 
-            ConvertArgFunc& convertArg, DeleteValueFunc& deleteValue)
-        : HasHelpInfo(name), checkType(checkType), convertArg(convertArg), deleteValue(deleteValue)
-    {
-
-    }
+    ArgumentType::ArgumentType(std::string name): HasHelpInfo(name){}
+  
+    ArgumentType::ArgumentType(std::string name, std::string description): HasHelpInfo(name, description){}
 
     ArgumentType* ArgumentType::setDescription(std::string description)
     {
         this->description = description;
         return this;
-    }
-
-    bool ArgumentType::CheckStringIsOfType(std::string token)
-    {
-        return checkType(token);
-    }
-
-    void* ArgumentType::ConvertStringToType(std::string token)
-    {
-        return convertArg(token);
-    }
-
-    void ArgumentType::DeleteValue(void* value)
-    {
-        return deleteValue(value);
     }
 
     void ArgumentType::printHelp(std::ostream& out)

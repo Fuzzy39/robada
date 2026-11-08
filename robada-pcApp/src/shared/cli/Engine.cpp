@@ -18,7 +18,7 @@ namespace cli
         builtins::registerTypes(*this);
     }
 
-    cli::ArgumentType* Engine::addType(ArgTypeId id, std::string name, ArgIsOfTypeFunc checkType, ConvertArgFunc convertArg, DeleteValueFunc deleteValue)
+    cli::ArgumentType* Engine::addType(ArgTypeId id,  ArgumentType* type)
     {
         if(initialized) throw std::logic_error("Engine::addType: Can't add commands after initialization.");
 
@@ -30,7 +30,7 @@ namespace cli
             throw std::invalid_argument(error.str());
         }
 
-        typeRegistry.insert({id, std::make_unique<ArgumentType>(name, checkType, convertArg, deleteValue)});
+        typeRegistry.insert({id, std::unique_ptr<ArgumentType>(type)});
         return typeRegistry[id].get();
     }
 

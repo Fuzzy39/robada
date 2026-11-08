@@ -1,21 +1,34 @@
 #include <cli/Builtins.h>
 namespace cli::builtins
 {
-    bool isToken(std::string& token)
+    // token/string type
+    TokenType::TokenType(): ArgumentType("arbitrary", "Any arbitrary value."){}
+
+    bool TokenType::CheckStringIsOfType(std::string token)
     {
         return true;
     }
 
-    void* convertToken(std::string& token)
+    void* TokenType::ConvertStringToType(std::string token)
     {
         return new std::string(token); 
     }
 
-    bool isInt(std::string& token)
+    void TokenType::DeleteValue(void* value)
+    {
+        delete static_cast<std::string*>(value);
+    }
+
+    // Integer type
+    IntType::IntType(): ArgumentType("integer", "Any integer."){}
+
+    bool IntType::CheckStringIsOfType(std::string token)
     {
         try
         {
-            std::stoi(token);
+            size_t chars;
+            std::stoi(token, &chars);
+            if(chars<token.size()) return false;
         }
         catch(const std::invalid_argument& e)
         {
@@ -24,12 +37,22 @@ namespace cli::builtins
 
         return true;
     }
-    void* convertInt(std::string& token)
+
+    void* IntType::ConvertStringToType(std::string token)
     {
+      
         return new int(std::stoi(token));
     }   
 
-    bool isDouble(std::string& token)
+    void IntType::DeleteValue(void* value)
+    {
+        delete static_cast<int*>(value);
+    }
+
+    // Double type
+    DoubleType::DoubleType(): ArgumentType("number", "Any number."){}
+
+    bool DoubleType::CheckStringIsOfType(std::string token)
     {
         try
         {
@@ -42,29 +65,22 @@ namespace cli::builtins
         return true;
     }
 
-    void* convertDouble(std::string& token)
+    void* DoubleType::ConvertStringToType(std::string token)
     {
         return new double(std::stod(token));
+    }   
+
+    void DoubleType::DeleteValue(void* value)
+    {
+        delete static_cast<double*>(value);
     }
-    
+
+
     void registerTypes(cli::Engine& engine)
     {
-        ArgIsOfTypeFunc is = isToken;
-        ConvertArgFunc conv = convertToken;
-        engine.addType(TOKEN, "arbitrary", is, conv, 
-            [](void* p)->void{ delete static_cast<std::string*>(p);})
-            ->setDescription("Any arbitrary value."); 
-        
-        is = isInt;
-        conv = convertToken;
-        engine.addType(INT, "integer", is, conv,
-            [](void* p)->void{ delete static_cast<int*>(p);})
-            ->setDescription("Any integer.");
-
-        is = isDouble;
-        conv = convertDouble;
-        engine.addType(DOUBLE, "number", is, conv,
-            [](void* p)->void{ delete static_cast<double*>(p);})
-            ->setDescription("Any number.");
+       
+        engine.addType(TOKEN, new TokenType()); 
+        engine.addType(INT, new IntType()); 
+        engine.addType(DOUBLE, new DoubleType());
     }
 }

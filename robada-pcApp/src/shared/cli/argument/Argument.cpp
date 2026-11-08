@@ -22,7 +22,7 @@ namespace cli
     {
         if(!type.CheckStringIsOfType(token))
         {
-            out << name <<" argument of "<<commandName<<" must be a(n)" << type.getName()<<".\n";
+            out << name <<" argument of "<<commandName<<" must be a(n) " << type.getName()<<".\n";
             return nullptr;
         }
 

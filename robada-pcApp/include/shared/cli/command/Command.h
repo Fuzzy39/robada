@@ -43,7 +43,9 @@ namespace cli
         // optional arguments will be added at the end of the argument list.
         Command* addOptionalArgument(std::string name, std::string description, ArgTypeId type); 
 
-        // Add a variadic argument to the command. This argument goes last and is returned as a vector.
+        // Add a variadic argument to the command, allowing a command to have potentially unlimited arguments.
+        // These arguments go last in userargs and are returned as a vector<void*> with the given name.
+        // A command can only have a single variadic argument.
         Command* addVariadicArgument(std::string name, std::string description, ArgTypeId type); 
 
         // function to do command
@@ -54,8 +56,15 @@ namespace cli
     protected:
         void verifyArgumentValid(std::string name, ArgTypeId type);
 
+        // Argument Handling:
         // may return a nullptr if arguments are invalid.
-        std::unique_ptr<UserArgs> parseArguments(std::vector<std::string> args, std::ostream& out) const;
+        std::unique_ptr<UserArgs> parseArguments(std::vector<std::string> rawArguments, std::ostream& out) const;
+        
+        bool checkArgumentsSize(std::vector<std::string> rawArguments, std::ostream& out) const;
+
+        bool parseVariadicArguments(UserArgs* toReturn, std::vector<std::string> rawArguments, std::ostream& out) const;
+
+        void deleteArgumentValues(UserArgs&) const;
 
         static bool defaultCommand(UserArgs args, std::ostream& out);
     };  
