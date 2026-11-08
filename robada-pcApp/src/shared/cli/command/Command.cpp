@@ -2,11 +2,12 @@
 #include <stdexcept>
 #include <ostream>
 #include <sstream>
+#include <iostream>
 
 namespace cli
 {
-    Command::Command(TypeRegistry& typeRegistry, std::string name, CommandFunc onRun)
-        : CommandBase(name), typeRegistry(typeRegistry), onRun(onRun)
+    Command::Command(TypeRegistry& typeRegistry, std::string name )
+        : CommandBase(name), typeRegistry(typeRegistry), onRun(Command::defaultCommand), variadicArgument(nullptr)
     {
         if(onRun==nullptr)
         {
@@ -21,22 +22,37 @@ namespace cli
         return this;
     }
 
-    Argument* Command::addArgument(std::string name, ArgTypeId type)
+    Command* Command::setImplementation(const CommandFunc& command)
+    {
+        onRun = command;
+        return this;
+    }
+
+    Command* Command::addArgument(std::string name, std::string description, ArgTypeId type)
     {
         verifyArgumentValid(name, type);
         // actually do the work.
-        arguments.insert(arguments.begin()+minArgs+1, std::make_unique<Argument>(name, typeRegistry[type]));
+        arguments.insert(arguments.begin()+minArgs+1, 
+            std::make_unique<Argument>(name, description, *typeRegistry[type]));
         minArgs++;
-        return arguments[minArgs].get();
+        return this;
 
     }
 
     // optional arguments will be added at the end of the argument list.
-    Argument* Command::addOptionalArgument(std::string name, ArgTypeId type)
+    Command* Command::addOptionalArgument(std::string name, std::string description, ArgTypeId type)
     {
         verifyArgumentValid(name, type);
-        arguments.push_back(std::make_unique<Argument>(name, typeRegistry[type]));
-        return arguments[arguments.size()-1].get();
+        arguments.push_back(std::make_unique<Argument>(name, description, *typeRegistry[type]));
+        return this;
+    }
+
+    Command* Command::addVariadicArgument(std::string name, std::string description, ArgTypeId type)
+    {
+        verifyArgumentValid(name, type);
+        if(variadicArgument) throw std::invalid_argument("Command::addVariadicArgument: This command already has a variadic argument.\n");
+        variadicArgument = std::make_unique<Argument>(name, description, *typeRegistry[type]);
+        return this;
     }
 
     void Command::verifyArgumentValid(std::string name, ArgTypeId type)
@@ -66,16 +82,29 @@ namespace cli
     bool cli::Command::run(std::vector<std::string>args, std::ostream& out)
     {
         std::unique_ptr<UserArgs> argsToPass = parseArguments(args, out);
-        bool toReturn = argsToPass.get() == nullptr;
-
+        bool toReturn = argsToPass.get() != nullptr;
+        std::cout<<"To return: "<<toReturn<<"\n";
         if(toReturn)
         {
             toReturn = onRun(*argsToPass, out);
 
             // free arguments after the call.
-            for (UserArgs::iterator it = argsToPass->begin(); it != argsToPass->end(); it++)
+
+            // variadic arguments
+            if(variadicArgument)
             {
-                delete it->second;
+                auto variadicArgs = static_cast< std::vector<void*>*>((*argsToPass)[variadicArgument->getName()]);
+                for(void* arg : *variadicArgs)
+                {
+                    variadicArgument->getType().DeleteValue(arg);
+                }
+            }
+
+            // normal arguments
+            for(const std::unique_ptr<Argument>& arg : arguments)
+            {
+                void* argToDelete =  (*argsToPass)[arg->getName()];
+                if(argToDelete != nullptr) arg->getType().DeleteValue(argToDelete);
             }
         } 
 
@@ -85,21 +114,18 @@ namespace cli
         return toReturn;
     }
 
-    
-
-
-    std::unique_ptr<UserArgs> Command::parseArguments(std::vector<std::string> args, std::ostream& out) const
+    std::unique_ptr<UserArgs> Command::parseArguments(std::vector<std::string> rawArguments, std::ostream& out) const
     {
-        if(args.size()<minArgs)
+        if(rawArguments.size()<minArgs)
         {
             out << "Too few arguments for "<< name <<". Expected at least "<<minArgs<<".\n";   
-            return std::make_unique<UserArgs>(nullptr);
+            return std::unique_ptr<UserArgs>(nullptr);
         }
 
-        if(args.size()>arguments.size())
+        if(rawArguments.size()>arguments.size() && !variadicArgument)
         {
             out << "Too many arguments for "<< name <<". Expected at most "<<arguments.size()<<".\n";  
-            return std::make_unique<UserArgs>(nullptr);
+            return std::unique_ptr<UserArgs>(nullptr);
         }
 
         // actually try to parse the args.
@@ -108,29 +134,74 @@ namespace cli
 
         for(const std::unique_ptr<Argument>& arg : arguments)
         {   
-            void* argumentValue = arg->tryGetArgument(getName(), args[i], out);
+            if(i>= rawArguments.size())
+            {
+                // Optional argument is not present.
+                std::cout<<"Optional Argument not present.\n";
+                toReturn->insert({arg->getName(), nullptr});
+                continue;
+            }
+
+            void* argumentValue = arg->tryGetArgument(getName(), rawArguments[i], out);
 
             if(argumentValue == nullptr)
             {
                 // This argument failed to parse. Abort.
-                return std::make_unique<UserArgs>(nullptr);
+                std::cout<<"Argument failed to parse.\n";
+                return std::unique_ptr<UserArgs>(nullptr);
             }
 
+            std::cout<<"Added Argument\n";
             toReturn->insert({arg->getName(),  argumentValue});
             i++;
+        }
+
+        if(!variadicArgument) return toReturn;
+
+        // parse variadic arguments
+        std::vector<void*>* varargs = new std::vector<void*>();
+        toReturn->insert({variadicArgument->getName(), varargs});
+
+        for(int i = arguments.size(); i<rawArguments.size(); i++)
+        {
+            void* argumentValue = variadicArgument->tryGetArgument(getName(), rawArguments[i], out);
+
+            if(argumentValue == nullptr)
+            {
+                // This argument failed to parse. Abort.
+                return std::unique_ptr<UserArgs>(nullptr);
+            }
+            varargs->push_back(argumentValue);
         }
 
         return toReturn;
     }
 
-    // a pretty lame implementation, if you ask me...
     void Command::printHelp(std::ostream& out)
     {
-        out << "Help for " << name << ": " << description << "\nArguments:\n";
+        out << "Help for " << name << ": " << description;
+        
+        if(arguments.size()>0 || variadicArgument)
+        {
+           out << "\nArguments:\n";
+        }
+
         for(const std::unique_ptr<Argument>& arg : arguments)
         {  
             out<<"\t";
             arg->printHelp(out);
         }
+
+        if(variadicArgument)
+        {
+            out<<"\tRepeatable: ";
+            variadicArgument->printHelp(out);
+        }
+    }
+
+    bool Command::defaultCommand(UserArgs args, std::ostream& out)
+    {
+        out << "This command has no implementation defined.\n";
+        return true;
     }
 }

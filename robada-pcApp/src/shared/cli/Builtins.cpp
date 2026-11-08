@@ -51,17 +51,20 @@ namespace cli::builtins
     {
         ArgIsOfTypeFunc is = isToken;
         ConvertArgFunc conv = convertToken;
-        engine.addType(TOKEN, "arbitrary", is, conv)
+        engine.addType(TOKEN, "arbitrary", is, conv, 
+            [](void* p)->void{ delete static_cast<std::string*>(p);})
             ->setDescription("Any arbitrary value."); 
         
         is = isInt;
         conv = convertToken;
-        engine.addType(INT, "integer", is, conv)
+        engine.addType(INT, "integer", is, conv,
+            [](void* p)->void{ delete static_cast<int*>(p);})
             ->setDescription("Any integer.");
 
         is = isDouble;
         conv = convertDouble;
-        engine.addType(DOUBLE, "number", is, conv)
+        engine.addType(DOUBLE, "number", is, conv,
+            [](void* p)->void{ delete static_cast<double*>(p);})
             ->setDescription("Any number.");
     }
 }

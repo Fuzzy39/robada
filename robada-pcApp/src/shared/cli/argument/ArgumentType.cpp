@@ -2,8 +2,9 @@
 
 namespace cli
 {
-    ArgumentType::ArgumentType(std::string name, ArgIsOfTypeFunc& checkType, ConvertArgFunc& convertArg)
-        : HasHelpInfo(name), checkType(checkType), convertArg(convertArg)
+    ArgumentType::ArgumentType(std::string name, ArgIsOfTypeFunc& checkType, 
+            ConvertArgFunc& convertArg, DeleteValueFunc& deleteValue)
+        : HasHelpInfo(name), checkType(checkType), convertArg(convertArg), deleteValue(deleteValue)
     {
 
     }
@@ -22,6 +23,11 @@ namespace cli
     void* ArgumentType::ConvertStringToType(std::string token)
     {
         return convertArg(token);
+    }
+
+    void ArgumentType::DeleteValue(void* value)
+    {
+        return deleteValue(value);
     }
 
     void ArgumentType::printHelp(std::ostream& out)

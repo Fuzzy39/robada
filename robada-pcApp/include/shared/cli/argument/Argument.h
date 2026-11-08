@@ -11,10 +11,7 @@ namespace cli
         ArgumentType& type;
     
     public:
-        Argument(std::string name, ArgumentType& type);
-
-        // configuration functions
-        Argument* setDescription(std::string description);
+        Argument(std::string name, std::string description, ArgumentType& type);
         
         // Main functions
         ArgumentType& getType();

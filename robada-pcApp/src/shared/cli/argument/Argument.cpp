@@ -2,19 +2,12 @@
 
 namespace cli
 {
-    Argument::Argument(std::string name, ArgumentType& type) 
-        : HasHelpInfo(name), type(type)
+    Argument::Argument(std::string name, std::string description, ArgumentType& type) 
+        : HasHelpInfo(name, description), type(type)
     {
 
     }
 
-    // configuration functions
-    Argument* Argument::setDescription(std::string description)
-    {
-        this->description = description;
-        return this;
-    }
-    
     // Main functions
     ArgumentType& Argument::getType()
     {

@@ -14,10 +14,11 @@ namespace cli
     {
         initialized = false;
         root.setDescription(briefDescription);
+
         builtins::registerTypes(*this);
     }
 
-    cli::ArgumentType* Engine::addType(ArgTypeId id, std::string name, ArgIsOfTypeFunc& checkType, ConvertArgFunc& convertArg)
+    cli::ArgumentType* Engine::addType(ArgTypeId id, std::string name, ArgIsOfTypeFunc checkType, ConvertArgFunc convertArg, DeleteValueFunc deleteValue)
     {
         if(initialized) throw std::logic_error("Engine::addType: Can't add commands after initialization.");
 
@@ -29,13 +30,13 @@ namespace cli
             throw std::invalid_argument(error.str());
         }
 
-        typeRegistry.insert({id, std::make_unique<ArgumentType>(name, checkType, convertArg)});
+        typeRegistry.insert({id, std::make_unique<ArgumentType>(name, checkType, convertArg, deleteValue)});
         return typeRegistry[id].get();
     }
 
 
 
-    cli::Command* Engine::addCommand(cli::CommandGroup* parent, std::string name, CommandFunc onRun)
+    cli::Command* Engine::addCommand(cli::CommandGroup* parent, std::string name)
     {
         if(initialized) throw std::logic_error("Engine::addCommand: Can't add commands after initialization.");
 
@@ -51,7 +52,7 @@ namespace cli
         
         // okay, add it
         // Now, probably this should be a unique pointer from the start but I'm being lazy here.
-        Command* toReturn = new Command(typeRegistry, name, onRun); 
+        Command* toReturn = new Command(typeRegistry, name); 
         parent->addCommand(toReturn);
         return toReturn;
     }
@@ -80,10 +81,11 @@ namespace cli
 
     void cli::Engine::initialize()
     {
+        implementHelp();
+
         if(initialized) throw std::logic_error("Engine::initalize: Already initialized.");
         initialized=true;
 
-        implementHelp();
         output << "Welcome to Robada CLI! 'help' for help.\n";
         output << "> ";
     }
@@ -177,41 +179,52 @@ namespace cli
     {
         // help is a fancy special command.
         //addCommand(nullptr, "help", )
+        addCommand(nullptr, "help")
+            ->setDescription(
+                "Get information about a command.\nUse arguments to get information"
+                " about a specific command by typing it the way you would a normal command."
+                "\ne.g. 'help help' would provide help info for this command.")
+            ->addVariadicArgument("arguments", "Specify the command the way you would call it.", builtins::Types::TOKEN)
+            ->setImplementation(
+                [&](UserArgs args, std::ostream& out)->bool
+                {   
+                    // we use the args as a list to find a command of that name and print the help for it.
 
-        root.addCommand(new Command("help", "Get information about a command.\nUse arguments to get information about a specific command.", 0, -1,
-            [&](std::vector<std::string> args, std::ostream& out)->bool
-            {
-                // we use the args as a list to find a command of that name and print the help for it.
-                CommandGroup* current = &root;
+                    // extract the variadic argument(s)
+                    void* vararg = args["arguments"];
+                    auto arguments = static_cast<std::vector<void*>*>(vararg);
 
-                for (int i = 0; i<args.size(); i++)
-                {
-                    std::string& commandName = args[i];
-
-                    CommandBase* next = current->findSubCommand(commandName);
-                    if (next == nullptr)
+                    CommandGroup* current = &root;
+                    for (int i = 0; i<arguments->size(); i++)
                     {
-                        out << "Couldn't find command '" << commandName << "'.\n";
-                        current->printHelp(out);
-                        return true;
-                    }
+                        std::string& commandName = *static_cast<std::string*>((*arguments)[i]);
 
-                    current = dynamic_cast<CommandGroup*>(next);
-                    if (current == nullptr)
-                    {
-                        if (i != args.size() - 1)
+                        CommandBase* next = current->findSubCommand(commandName);
+                        if (next == nullptr)
                         {
-                            out << "'"<<commandName << "' Does not have subcommands.\n";
+                            out << "Couldn't find command '" << commandName << "'.\n";
+                            current->printHelp(out);
+                            return true;
                         }
 
-                        next->printHelp(out);
-                        return true;
-                    }
-                }
+                        current = dynamic_cast<CommandGroup*>(next);
+                        if (current == nullptr)
+                        {
+                            if (i != arguments->size() - 1)
+                            {
+                                out << "'"<<commandName << "' Does not have subcommands.\n";
+                            }
 
-                current -> printHelp(out);
-                return true;
-            }));
+                            next->printHelp(out);
+                            return true;
+                        }
+                    }
+
+                    current -> printHelp(out);
+                    return true;
+                });
+        
+        
     }
 
 }

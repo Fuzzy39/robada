@@ -4,7 +4,10 @@
 
 void registerConsoleCommands(cli::Engine& engine)
 {
-    engine.addCommand(nullptr, new cli::Command("clear", "Clears the console.", 0, 0, COMMAND{
+    engine.addCommand(nullptr, "clear")
+        ->setDescription("Clears the console.")
+        ->setImplementation( COMMAND
+        {
 #ifdef WINDOWS
         std::system("cls");
 #else
@@ -12,7 +15,8 @@ void registerConsoleCommands(cli::Engine& engine)
         std::system ("clear");
 #endif
         return true;
-    }));
+        });
+  
 }
 
 
@@ -24,6 +28,7 @@ int main(void)
         robadaCLI::Engine parser(std::cin, std::cout);
         registerConsoleCommands(parser);
         parser.initialize();
+
         while(parser.interpret());
     }
     catch(const std::exception& e)

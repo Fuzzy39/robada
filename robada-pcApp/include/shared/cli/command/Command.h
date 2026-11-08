@@ -12,7 +12,7 @@
 
 namespace cli
 {
-    typedef std::map<const std::string&, void*> UserArgs;
+    typedef std::map<const std::string, void*> UserArgs;
     typedef std::function<bool(UserArgs, std::ostream&)> CommandFunc;
 
 
@@ -21,20 +21,30 @@ namespace cli
        
 
     protected:
-        int minArgs;    // -1 to mean no min
-        CommandFunc onRun; // command implementation. returns success. On failure, prints description.
-        std::vector<std::unique_ptr<cli::Argument>> arguments;
+
         TypeRegistry& typeRegistry;
+        CommandFunc onRun; // command implementation. returns success. On failure, prints description.
+
+        int minArgs;
+        std::vector<std::unique_ptr<cli::Argument>> arguments;
+        std::unique_ptr<cli::Argument> variadicArgument; // null if no vararg
 
     public:
-        Command(TypeRegistry& typeRegistry, std::string name, CommandFunc onRun);
-
+        Command(TypeRegistry& typeRegistry, std::string name);
+    
         // setup commands   
         Command* setDescription(std::string description);
-        Argument* addArgument(std::string name, ArgTypeId type);
-        // optional arguments will be added at the end of the argument list.
-        Argument* addOptionalArgument(std::string name, ArgTypeId type);
 
+        Command* setImplementation(const CommandFunc& command);
+
+        // add an argument with a name and description.
+        Command* addArgument(std::string name, std::string description, ArgTypeId type);
+
+        // optional arguments will be added at the end of the argument list.
+        Command* addOptionalArgument(std::string name, std::string description, ArgTypeId type); 
+
+        // Add a variadic argument to the command. This argument goes last and is returned as a vector.
+        Command* addVariadicArgument(std::string name, std::string description, ArgTypeId type); 
 
         // function to do command
         bool run(std::vector<std::string>args, std::ostream& out) override;
@@ -46,7 +56,9 @@ namespace cli
 
         // may return a nullptr if arguments are invalid.
         std::unique_ptr<UserArgs> parseArguments(std::vector<std::string> args, std::ostream& out) const;
+
+        static bool defaultCommand(UserArgs args, std::ostream& out);
     };  
 }
 
-#define COMMAND [](UserArgs args, std::ostream& out)->bool
+#define COMMAND [](cli::UserArgs args, std::ostream& out)->bool
