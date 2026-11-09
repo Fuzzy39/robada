@@ -16,14 +16,14 @@ namespace robadaCLI
     void Engine::registerSharedCommands()
     {
 
-        // addCommand(nullptr, "about")
-        //     ->setDescription("basic information about Robada pcApp.")
-        //     ->setImplementation(COMMAND
-        //     {
-        //         out << "Robada pcApp.\nControls the 3-axis robot Robada via bluetooth.\
-        //         \nThis software was made by Mason Hill.\nRobada was made by Matthew Lewis and Mason Hill.\n";
-        //         return true;
-        //     });
+        addCommand(nullptr, "about")
+            ->setDescription("basic information about Robada pcApp.")
+            ->setImplementation(COMMAND
+            {
+                out << "Robada pcApp.\nControls the 3-axis robot Robada via bluetooth.\
+                \nThis software was made by Mason Hill.\nRobada was made by Matthew Lewis and Mason Hill.\n";
+                return true;
+            });
 
 
         auto test = addCommandGroup(nullptr, "test")

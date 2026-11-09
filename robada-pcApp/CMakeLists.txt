@@ -3,8 +3,17 @@ cmake_minimum_required(VERSION 3.28)
 project(robada-pcApp LANGUAGES CXX)
 set (CMAKE_CXX_STANDARD 23)
 
+# Warnings
+if (MSVC)
+    # warning level 4
+    add_compile_options(/W4)
+else()
+    # additional warnings
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
 # simpleBLE
-find_package(simpleble REQUIRED CONFIG)
+#find_package(simpleble REQUIRED CONFIG)
 
 # wxWidgets
 set(wxUSE_STL ON)           # Seems like a good idea.
@@ -22,19 +31,19 @@ add_library(robadaLib STATIC "src/shared/cli/Engine.cpp" "src/shared/cli/HasHelp
 "src/shared/robadaCLI/Engine.cpp")
 
 # Really simple simpleble test. Probably temporary.
-add_executable(bleTest "bleTest/main.cpp")
-target_link_libraries(bleTest simpleble::simpleble)
+# add_executable(bleTest "bleTest/main.cpp")
+# target_link_libraries(bleTest simpleble::simpleble)
 
 # GUI pcApp
 add_executable(pcApp WIN32 "src/gui/main.cpp" "src/gui/TestPanel.cpp" "src/gui/ConsolePanel.cpp")
 target_include_directories(pcApp PUBLIC "include/gui")
 target_link_libraries(pcApp robadaLib)
-target_link_libraries(pcApp simpleble::simpleble)
+# target_link_libraries(pcApp simpleble::simpleble)
 target_link_libraries(pcApp  wx::net wx::core wx::base)
 
 # Console pcApp
 add_executable(pcAppConsole "src/console/main.cpp")
 target_include_directories(pcAppConsole PUBLIC "include/console")
 target_link_libraries(pcAppConsole robadaLib)
-target_link_libraries(pcAppConsole simpleble::simpleble)
+# target_link_libraries(pcAppConsole simpleble::simpleble)
 target_link_libraries(pcAppConsole ${wxWidgets_LIBRARIES})
