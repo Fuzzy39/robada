@@ -13,6 +13,7 @@ namespace cli
     public:
         HasHelpInfo(std::string name, std::string description);
         HasHelpInfo(std::string name);
+        virtual ~HasHelpInfo(){}
 
         virtual void printHelp(std::ostream& out) = 0;
 

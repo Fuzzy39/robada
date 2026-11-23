@@ -25,7 +25,7 @@ namespace cli
         TypeRegistry& typeRegistry;
         CommandFunc onRun; // command implementation. returns success. On failure, prints description.
 
-        int minArgs;
+        size_t minArgs;
         std::vector<std::unique_ptr<cli::Argument>> arguments;
         std::unique_ptr<cli::Argument> variadicArgument; // null if no vararg
 

@@ -18,6 +18,7 @@ namespace cli
     public:
         ArgumentType(std::string name);
         ArgumentType(std::string name, std::string description);
+        virtual ~ArgumentType(){}
 
         ArgumentType* setDescription(std::string description);
 

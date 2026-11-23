@@ -26,6 +26,7 @@ int main(void)
     try
     {
         robadaCLI::Engine parser(std::cin, std::cout);
+        std::cout<<"engine construct.\n";
         registerConsoleCommands(parser);
         parser.initialize();
 

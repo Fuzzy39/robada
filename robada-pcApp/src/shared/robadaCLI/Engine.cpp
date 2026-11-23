@@ -15,7 +15,7 @@ namespace robadaCLI
 
     void Engine::registerSharedCommands()
     {
-
+        std::cout<<"Start!\n";
         addCommand(nullptr, "about")
             ->setDescription("basic information about Robada pcApp.")
             ->setImplementation(COMMAND
@@ -31,7 +31,7 @@ namespace robadaCLI
             ->setDescription("Demonstrate cli functionality.\nSeriously, just a test. I was in fact testing you.");
         
         
-
+        std::cout<<"test!\n";  
         addCommand(test, "sum")
             ->setDescription("sums all of its arguments.\nI mean, checks out, right?")
             ->addArgument("Term 1", "The first term to add.", cli::builtins::Types::DOUBLE)
@@ -50,7 +50,7 @@ namespace robadaCLI
                 return true; 
             });
             
-  
+        std::cout<<"sum!\n";
         addCommand(test, "repeat")
             ->setDescription("Repeats it's first argument as many times as its second."
                              "\nIf the repeat count isn't provided, repeats twice.")
@@ -74,7 +74,7 @@ namespace robadaCLI
                 return true; 
             });
         
-
+        std::cout<<"repeat!\n";
         addCommand(nullptr, "add")
             ->setDescription("Add two numbers.")
             ->addArgument("Term 1", "The first number to add.", cli::builtins::Types::DOUBLE)
@@ -86,7 +86,7 @@ namespace robadaCLI
                out << Term1 <<" + "<< Term2 <<" = "<< (Term1+Term2)<<"\n";
                return true; 
             });
-
+        std::cout<<"Done!\n";
     }
 
 }

@@ -7,7 +7,8 @@
 namespace cli
 {
     Command::Command(TypeRegistry& typeRegistry, std::string name )
-        : CommandBase(name), arguments(),  typeRegistry(typeRegistry), onRun(Command::defaultCommand), variadicArgument(nullptr)
+        : CommandBase(name), typeRegistry(typeRegistry), onRun(Command::defaultCommand),
+          minArgs(0), arguments(), variadicArgument(nullptr)
     {
         if(onRun==nullptr)
         {
@@ -191,7 +192,7 @@ namespace cli
         std::vector<void*>* varargs = new std::vector<void*>();
         toReturn->insert({variadicArgument->getName(), varargs});
 
-        for(int i = arguments.size(); i<rawArguments.size(); i++)
+        for(size_t i = arguments.size(); i<rawArguments.size(); i++)
         {
             void* argumentValue = variadicArgument->tryGetArgument(getName(), rawArguments[i], out);
 
