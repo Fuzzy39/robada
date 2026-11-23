@@ -25,10 +25,13 @@ namespace robadaCLI
                 return true;
             });
 
+        
 
         auto test = addCommandGroup(nullptr, "test")
             ->setDescription("Demonstrate cli functionality.\nSeriously, just a test. I was in fact testing you.");
         
+        
+
         addCommand(test, "sum")
             ->setDescription("sums all of its arguments.\nI mean, checks out, right?")
             ->addArgument("Term 1", "The first term to add.", cli::builtins::Types::DOUBLE)
@@ -46,6 +49,7 @@ namespace robadaCLI
                 out<<"The sum is: "<<sum<<".\n";
                 return true; 
             });
+            
   
         addCommand(test, "repeat")
             ->setDescription("Repeats it's first argument as many times as its second."

@@ -7,7 +7,7 @@
 namespace cli
 {
     Command::Command(TypeRegistry& typeRegistry, std::string name )
-        : CommandBase(name), typeRegistry(typeRegistry), onRun(Command::defaultCommand), variadicArgument(nullptr)
+        : CommandBase(name), arguments(),  typeRegistry(typeRegistry), onRun(Command::defaultCommand), variadicArgument(nullptr)
     {
         if(onRun==nullptr)
         {
@@ -30,7 +30,9 @@ namespace cli
 
     Command* Command::addArgument(std::string name, std::string description, ArgTypeId type)
     {
+
         verifyArgumentValid(name, type);
+                
         // actually do the work.
         arguments.insert(arguments.begin()+minArgs, 
             std::make_unique<Argument>(name, description, *typeRegistry[type]));

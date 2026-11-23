@@ -4,13 +4,13 @@ project(robada-pcApp LANGUAGES CXX)
 set (CMAKE_CXX_STANDARD 23)
 
 # Warnings
-if (MSVC)
-    # warning level 4
-    add_compile_options(/W4)
-else()
-    # additional warnings
-    add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
+# if (MSVC)
+#     # warning level 4
+#     add_compile_options(/W4)
+# else()
+#     # additional warnings
+#     add_compile_options(-Wall -Wextra -Wpedantic)
+# endif()
 
 # simpleBLE
 #find_package(simpleble REQUIRED CONFIG)
@@ -27,7 +27,7 @@ add_subdirectory(wxWidgets)
 include_directories(PUBLIC "include/shared")
 add_library(robadaLib STATIC "src/shared/cli/Engine.cpp" "src/shared/cli/HasHelpInfo.cpp" "src/shared/cli/Builtins.cpp"
 "src/shared/cli/argument/Argument.cpp" "src/shared/cli/argument/ArgumentType.cpp"  
-"src/shared/cli/command/CommandBase.cpp" "src/shared/cli/command/CommandGroup.cpp" "src/shared/cli/command/Command.cpp" 
+"src/shared/cli/command/CommandGroup.cpp" "src/shared/cli/command/Command.cpp" 
 "src/shared/robadaCLI/Engine.cpp")
 
 # Really simple simpleble test. Probably temporary.
