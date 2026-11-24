@@ -1,4 +1,6 @@
 [submodule "robada-pcApp/wxWidgets"]
 	path = robada-pcApp/wxWidgets
 	url = https://github.com/wxWidgets/wxWidgets.git
-	branch = 3.2
+[submodule "robada-pcApp/simpleble"]
+	path = robada-pcApp/simpleble
+	url = https://github.com/simpleble/simpleble.git

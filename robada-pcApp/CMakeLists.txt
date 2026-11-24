@@ -13,7 +13,8 @@ set (CMAKE_CXX_STANDARD 23)
 # endif()
 
 # simpleBLE
-#find_package(simpleble REQUIRED CONFIG)
+set(SIMPLEBLE_INSTALL OFF)              # Makes it so there aren't any installation rules. Which we probably don't want.
+add_subdirectory(simpleble/simpleble)
 
 # wxWidgets
 set(wxUSE_STL ON)           # Seems like a good idea.
@@ -31,8 +32,8 @@ add_library(robadaLib STATIC "src/shared/cli/Engine.cpp" "src/shared/cli/HasHelp
 "src/shared/robadaCLI/Engine.cpp")
 
 # Really simple simpleble test. Probably temporary.
-# add_executable(bleTest "bleTest/main.cpp")
-# target_link_libraries(bleTest simpleble::simpleble)
+add_executable(bleTest "bleTest/main.cpp")
+target_link_libraries(bleTest simpleble::simpleble)
 
 # GUI pcApp
 add_executable(pcApp WIN32 "src/gui/main.cpp" "src/gui/TestPanel.cpp" "src/gui/ConsolePanel.cpp")

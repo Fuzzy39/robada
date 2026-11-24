@@ -15,32 +15,23 @@ First, you will need to clone the git repository.
 
 `git clone https://github.com/Fuzzy39/robada.git`
 
-Should clone the project and create a folder for it in the working directory.
+Should clone the project and create a folder for it in the working directory. 
+
+pcApp depends on wxWidgets for UI and simpleBLE for bluetooth communications. Both of these are gitsubmodules of the repo, and are built alongside the project.
+Run `git submodule update --init --recursive` To clone all of the dependencies that pcApp has. See `https://git-scm.com/book/en/v2/Git-Tools-Submodules` for more information about submodules. 
 
 ### WxWidgets
 
-Robada pcApp depends on wxWidgets version 3.2 for UI. In order to make the build system work cross platform with Cmake, wxWidgets is
-a git submodule of this project. After cloning you will need to run a couple additional commands:
-
-`git submodule init`
-
-followed by
-
-`git submodule update`
-
-This should download the wxWidgets source code for the project.
-
-Once done, confirm that the wxWidgets submodule is on the correct branch. (I'm not confident!) Navigate to robade-pcApp/wxWidgets and run `git branch`. Confirm the selected branch is 3.2.
-
-Then, navigate to the wxWidgets directory and run `git submodule init` and `update` again. This downloads wxWidgets' dependencies.
+Robada pcApp depends on wxWidgets version 3.3.4 for UI. Though many other versions of wxWidgets will probably work without issue.
+To set the version being used, navigate to the wxWidgets folder and run `git checkout v3.3.4`.
 
 On Linux, you will need to install the `libgtk-3-dev` package to build, as one of the linux options for wxWidgets depends on it.
 
 ### SimpleBLE
-Robada pcApp also depends on simpleBLE for cross-platform BLE capabilities.
-Please follow the instructions to build and install simpleble via CMake:
-https://docs.simpleble.org/simpleble/usage
+Robada pcApp depends on SimpleBLE version 1.4.0 for bluetooth communications, though many other versions may work without issue.
+To set the version being used, navigate to the simpleble folder and run `git checkout v1.4.0`.
 
+See more about building simpleble here: https://docs.simpleble.org/simpleble/usage
 
 
 ### Building
@@ -49,7 +40,7 @@ Once all of the dependencies are setup, run `cmake -B build -S .` in the robada-
 This sets up CMake with 'build' as the output folder.
 In theory, the development environment should now be set up.
 
-To build the project run `cmake --build build -j4`. If all goes well, you should find the executables somewhere in the build folder. Namely: `pcApp`, `pcAppConsole`, and (for now) `bleTest`. The first time will take a while, as wxWidgets needs to be built, but it shouldn't have to be built after the first time.
+To build the project run `cmake --build build -j4`. If all goes well, you should find the executables somewhere in the build folder. Namely: `pcApp`, `pcAppConsole`, and (for now) `bleTest`. The first time will take a while, as wxWidgets and simpleBLE need to be built, but it shouldn't have to be built after the first time.
 
 On Windows, if using visual studio as the build system, run `cmake --build build --config Release`
 (This is because I installed simpleble wrong when I did it on my machine, if you do it properly you shouldn't need the --config. TODO: FIX AND REMOVE THIS)
