@@ -8,6 +8,10 @@
 #include <sstream>
 #include <memory>
 #include <robadaCLI/Engine.h>
+#include <wx/textctrl.h>
+#include <wx/panel.h>
+#include <wx/textctrl.h>
+
 
 class ConsolePanel: public wxPanel
 {

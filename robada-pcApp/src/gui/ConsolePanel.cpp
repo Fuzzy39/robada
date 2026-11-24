@@ -62,7 +62,7 @@ void ConsolePanel::OnTextChanged(wxCommandEvent& event)
 void ConsolePanel::OnUserInput(wxCommandEvent& event)
 {
     // set the input stream to get our user input.
-    input->str(textCtrl->GetRange(userStartPosition, textCtrl->GetLastPosition()));
+    input->str(textCtrl->GetRange(userStartPosition, textCtrl->GetLastPosition()).ToStdString());
     input->seekg(0); // reset the position of the input as well.
 
     textCtrl->AppendText("\n"); // give a newline
