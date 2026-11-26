@@ -1,6 +1,7 @@
 #include "robadaCLI/Engine.h"
 #include "cli/Engine.h"
 #include "cli/Builtins.h"
+#include "RobadaLib.h"
 
 namespace robadaCLI
 {
@@ -9,7 +10,8 @@ namespace robadaCLI
     Engine::Engine(std::istream& input, std::ostream& output) 
         : cli::Engine(input, output, "Robada CLI", "Software for controlling the 3-axis robot Robada.\n\"exit\" or \"quit\" to exit.")
     {
-        registerSharedCommands();   
+        registerSharedCommands();  
+        RobadaLib::getInstance(); 
     }
 
 
@@ -81,6 +83,21 @@ namespace robadaCLI
                double Term2 = *static_cast<double*>(args["Term 2"]);
                out << Term1 <<" + "<< Term2 <<" = "<< (Term1+Term2)<<"\n";
                return true; 
+            });
+
+         addCommand(test, "thread")
+            ->setDescription("Count until a certain time has elapsed.")
+            ->setImplementation(COMMAND
+            {
+                std::future<void> result = RobadaLib::getInstance().sleep();
+                while(result.wait_for(std::chrono::milliseconds(100)) == std::future_status::timeout)
+                {
+                    out<<".";
+                    out.flush();
+                }
+                out<<"\nDone!\n";
+
+                return true; 
             });
     }
 

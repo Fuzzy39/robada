@@ -25,9 +25,9 @@ set(wxBUILD_SHARED OFF)     # For whatever reason wxWidgets doesn't seem to work
 add_subdirectory(wxWidgets)
 
 # RobadaLib
-add_library(robadaLib SHARED "src/robadaLib/private/RequestQueue.cpp")
-target_include_directories(robadaLib PUBLIC "include/robadalib/private")
-target_include_directories(robadaLib PUBLIC "include/robadalib/public")
+add_library(robadaLib SHARED "src/robadaLib/private/RequestQueue.cpp" "src/robadaLib/public/RobadaLib.cpp")
+target_include_directories(robadaLib PUBLIC "include/robadaLib")
+
 
 
 # cliLib
@@ -38,7 +38,7 @@ add_library(cliLib SHARED "src/cliLib/cli/Engine.cpp" "src/cliLib/cli/HasHelpInf
 "src/cliLib/cli/command/CommandGroup.cpp" "src/cliLib/cli/command/Command.cpp" 
 "src/cliLib/robadaCLI/Engine.cpp")
 target_include_directories(cliLib PUBLIC "include/cliLib")
-target_include_directories(robadaLib PUBLIC "include/robadalib/public")
+target_include_directories(robadaLib PUBLIC "include/robadaLib/public")
 target_link_libraries(cliLib robadaLib)
 
 
@@ -51,7 +51,7 @@ target_link_libraries(bleTest simpleble::simpleble)
 add_executable(pcApp WIN32 "src/gui/main.cpp" "src/gui/TestPanel.cpp" "src/gui/ConsolePanel.cpp")
 
 target_include_directories(pcApp PUBLIC "include/gui")
-target_include_directories(pcApp PUBLIC "include/robadalib/public")
+target_include_directories(pcApp PUBLIC "include/robadaLib/public")
 target_include_directories(pcApp PUBLIC "include/cliLib")
 
 target_link_libraries(pcApp robadaLib)

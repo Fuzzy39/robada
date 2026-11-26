@@ -19,16 +19,21 @@ namespace robada
     class RequestQueue
     {
     private:
+        class Servicable
+        {
+        public:
+           virtual void serviceRequest() = 0;  
+        };
+
         // request classes. A request represents a function call that will be made on the requestQueue's thread.
         template <typename returnType>
-        class RequestBase
+        class RequestBase : public Servicable
         {
         protected:
-            const std::promise<returnType> promise;
+            std::promise<returnType> promise;
         public:
             RequestBase();
             std::future<returnType> getFuture();
-            virtual void serviceRequest() = 0;
         };
         
         // a request with no parameters
@@ -40,6 +45,7 @@ namespace robada
         public:
             Request(std::function<returnType()> func);
             virtual void serviceRequest() override;
+            
         };
 
         // a request with a single parameter
@@ -57,8 +63,8 @@ namespace robada
 
         // class members
     private:
-        std::mutex lock;
-        std::queue<RequestBase<std::any>> requests;
+        std::mutex lock; // protects the queue.
+        std::queue<std::unique_ptr<Servicable>> requests; // not any, it's a RequestBase. But I can't figure out how to specify that.
     public:
         RequestQueue(); 
 
@@ -72,7 +78,8 @@ namespace robada
         template <typename returnType, typename paramType>
         std::future<returnType> submitRequest(std::function<returnType(paramType)> func, paramType param);
 
-        
-        // NOT user function, submit request constructs promise, and request, returns future. 
     };
 }
+
+#include <private/Request.ipp>
+#include <private/RequestQueue.ipp>
