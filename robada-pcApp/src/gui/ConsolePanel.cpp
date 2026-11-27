@@ -1,4 +1,8 @@
-#include "ConsolePanel.h"   
+#include "ConsolePanel.h" 
+#include <future>  
+
+wxDEFINE_EVENT(EVT_CLI_COMMAND_FINISHED, wxCommandEvent);
+
 
 ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(parent), mainWindow(mainWindow)
 {
@@ -11,7 +15,7 @@ ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(paren
 
     // setup CLI engine.
     input = std::make_unique<std::istringstream>();
-    output = std::make_unique<std::ostream>(textCtrl);
+    output = std::make_unique<std::ostringstream>();
     try
     {   
         cliEngine = std::make_unique<robadaCLI::Engine>(*input, *output);
@@ -24,7 +28,8 @@ ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(paren
                 return true; 
             });
 
-        cliEngine->initialize();    
+        cliEngine->initialize();
+          
     }
     catch(const std::exception& e) 
     {   
@@ -34,6 +39,8 @@ ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(paren
         textCtrl->SetEditable(false);
     }
    
+    textCtrl->AppendText(output->str());
+    output->str("");
     
     userStartPosition = textCtrl->GetLastPosition();
     textCtrlContents = textCtrl->GetValue();
@@ -41,6 +48,7 @@ ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(paren
     // bind events.
     textCtrl->Bind(wxEVT_TEXT_ENTER, &ConsolePanel::OnUserInput, this);
     textCtrl->Bind(wxEVT_TEXT, &ConsolePanel::OnTextChanged, this);
+    Bind(EVT_CLI_COMMAND_FINISHED, &ConsolePanel::OnCommandFinished, this);
 }
 
 void ConsolePanel::OnTextChanged(wxCommandEvent& event)
@@ -66,14 +74,46 @@ void ConsolePanel::OnUserInput(wxCommandEvent& event)
     input->seekg(0); // reset the position of the input as well.
 
     textCtrl->AppendText("\n"); // give a newline
-    if(!cliEngine->interpret())
+
+    // Run the console command asyncronously.
+    std::thread thread([&]()
     {
-        // How can I close the app?
+        bool toReturn = cliEngine->interpret();
+
+        // send an event...
+        wxCommandEvent* event = new wxCommandEvent(EVT_CLI_COMMAND_FINISHED);
+        //event->SetEventObject(this);
+ 
+        event->SetInt(toReturn); // set the int as the return value. Good enough, I suppose.
+        QueueEvent(event);
+    });
+    thread.detach();
+
+    // disable the console in the meantime, while we wait for the command to complete.
+    // TODO: Also disable the notebook.
+    textCtrl->Disable();
+   
+
+}
+
+
+void ConsolePanel::OnCommandFinished(wxCommandEvent& event)
+{
+    // append output.
+    textCtrl->AppendText(output->str());
+    output->str("");
+
+    if(event.GetInt()==0)
+    {
+        // if cliEngine.interpret returns false, close the app.
         mainWindow->Close(true);
         return;
-    }   
-
-    // update the last position the user can edit. TODO: put this in a callback and call interpret in a new thread or something.
+    }
+  
+    // update the last position the user can edit before re-enabling the cli text control.
     userStartPosition = textCtrl->GetLastPosition();
     textCtrlContents = textCtrl->GetValue();
+    textCtrl->Enable();
+    textCtrl->SetFocus(); // focus gets lost when the window is disabled. Put it back.
 }
+

@@ -12,6 +12,7 @@
 #include <wx/panel.h>
 #include <wx/textctrl.h>
 
+wxDECLARE_EVENT(EVT_CLI_COMMAND_FINISHED, wxCommandEvent);
 
 class ConsolePanel: public wxPanel
 {
@@ -20,7 +21,7 @@ private:
     wxTextCtrl* textCtrl;
     std::unique_ptr<cli::Engine> cliEngine;
     std::unique_ptr<std::istringstream> input;
-    std::unique_ptr<std::ostream> output;
+    std::unique_ptr<std::ostringstream> output;
 
     std::string textCtrlContents;
     wxTextPos userStartPosition;
@@ -30,4 +31,5 @@ public:
 private:
     void OnTextChanged(wxCommandEvent& event);
     void OnUserInput(wxCommandEvent& event);
+    void OnCommandFinished(wxCommandEvent& event);
 };
