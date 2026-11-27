@@ -2,6 +2,8 @@
 #include <future>  
 
 wxDEFINE_EVENT(EVT_CLI_COMMAND_FINISHED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_CLI_CLEAR, wxCommandEvent);
+
 
 
 ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(parent), mainWindow(mainWindow)
@@ -22,9 +24,11 @@ ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(paren
         cliEngine->addCommand(nullptr, "clear")
             ->setDescription("Clears the CLI window.")
             ->setImplementation(
-            [this](cli::UserArgs args, std::ostream& out)->bool 
+            [&](cli::UserArgs args, std::ostream& out)->bool 
             { 
-                textCtrl->Clear(); 
+                // send a clear event. Can't directly clear the control because this is on a different thread.
+                wxCommandEvent* event = new wxCommandEvent(EVT_CLI_CLEAR);
+                QueueEvent(event);
                 return true; 
             });
 
@@ -49,6 +53,8 @@ ConsolePanel::ConsolePanel(wxWindow* parent, wxFrame* mainWindow): wxPanel(paren
     textCtrl->Bind(wxEVT_TEXT_ENTER, &ConsolePanel::OnUserInput, this);
     textCtrl->Bind(wxEVT_TEXT, &ConsolePanel::OnTextChanged, this);
     Bind(EVT_CLI_COMMAND_FINISHED, &ConsolePanel::OnCommandFinished, this);
+    Bind(EVT_CLI_CLEAR, &ConsolePanel::OnCommandClear, this);
+
 }
 
 void ConsolePanel::OnTextChanged(wxCommandEvent& event)
@@ -116,4 +122,12 @@ void ConsolePanel::OnCommandFinished(wxCommandEvent& event)
     textCtrl->Enable();
     textCtrl->SetFocus(); // focus gets lost when the window is disabled. Put it back.
 }
+
+void ConsolePanel::OnCommandClear(wxCommandEvent& event)
+{
+    textCtrlContents = "";
+    userStartPosition = 0;
+    textCtrl->Clear();
+}
+
 

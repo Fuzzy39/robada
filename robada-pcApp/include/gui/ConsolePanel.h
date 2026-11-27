@@ -13,6 +13,8 @@
 #include <wx/textctrl.h>
 
 wxDECLARE_EVENT(EVT_CLI_COMMAND_FINISHED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_CLI_CLEAR, wxCommandEvent);
+
 
 class ConsolePanel: public wxPanel
 {
@@ -32,4 +34,6 @@ private:
     void OnTextChanged(wxCommandEvent& event);
     void OnUserInput(wxCommandEvent& event);
     void OnCommandFinished(wxCommandEvent& event);
+    void OnCommandClear(wxCommandEvent& event);
+
 };
